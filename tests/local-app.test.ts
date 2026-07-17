@@ -11,8 +11,7 @@ test("uses a local Vite entry instead of external hosting", async () => {
 
   assert.match(html, /<div id="root"><\/div>/);
   assert.match(html, /\/src\/main\.tsx/);
-  assert.match(packageJson, /"dev": "vite --host 127\.0\.0\.1"/);
-  assert.match(packageJson, /"dev": "vite --host 127\.0\.0\.1"/);
+  assert.ok(packageJson.includes('"dev": "vite --host 127.0.0.1 --open /"'));
   assert.match(packageJson, /"build": "vite build"/);
   assert.doesNotMatch(viteConfig, /remote|deploy|hosting/i);
 

@@ -26,7 +26,8 @@ npm run lint
 npm test
 ```
 
-`npm run dev` serves the app from local Vite at `http://127.0.0.1:5173/`.
+`npm run dev` serves the app from local Vite at `http://127.0.0.1:5173/`
+and opens it automatically in your browser.
 There is no external hosting config in this project.
 
 `npm test` runs the local production build and topic-engine tests.
