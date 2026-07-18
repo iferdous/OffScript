@@ -52,6 +52,7 @@ type PracticeStatus = "idle" | "recording" | "paused" | "finished";
 
 type WheelState = {
   ballRotation: number;
+  ballRadius: number;
   rotation: number;
   selectedCategory: TopicCategory | null;
   spinning: boolean;
@@ -70,20 +71,33 @@ type Analysis = {
 
 const DEFAULT_SECONDS = 60;
 const MAX_SPINS = 5;
-const SPIN_DURATION_MS = 3200;
+const SPIN_DURATION_MS = 4700;
 const WHEEL_CATEGORIES: Array<{
   category: TopicCategory;
-  color: string;
-  short: string;
+  label: string;
 }> = [
-  { category: "Culture", color: "#D9A356", short: "Cul" },
-  { category: "Music", color: "#B8A6E8", short: "Mus" },
-  { category: "Identity", color: "#E08F76", short: "Id" },
-  { category: "Work", color: "#6D93B8", short: "Work" },
-  { category: "Opinion", color: "#B85F5B", short: "Take" },
-  { category: "Abstract", color: "#8F7CCB", short: "Abs" },
-  { category: "Story", color: "#D1B15E", short: "Story" },
-  { category: "Community", color: "#6DAA82", short: "Comm" },
+  { category: "Culture", label: "Culture" },
+  { category: "Music", label: "Music" },
+  { category: "Identity", label: "ID" },
+  { category: "Work", label: "Work" },
+  { category: "Opinion", label: "Opinion" },
+  { category: "Abstract", label: "Abstract" },
+  { category: "Story", label: "Story" },
+  { category: "Community", label: "Comm" },
+];
+const WHEEL_POCKETS = [
+  WHEEL_CATEGORIES[0],
+  WHEEL_CATEGORIES[4],
+  WHEEL_CATEGORIES[1],
+  WHEEL_CATEGORIES[6],
+  WHEEL_CATEGORIES[3],
+  WHEEL_CATEGORIES[2],
+  WHEEL_CATEGORIES[5],
+  WHEEL_CATEGORIES[7],
+  WHEEL_CATEGORIES[6],
+  WHEEL_CATEGORIES[1],
+  WHEEL_CATEGORIES[7],
+  WHEEL_CATEGORIES[5],
 ];
 const FILLERS = [
   "um",
@@ -115,32 +129,19 @@ function buildInitialPool() {
   return { hand: [] as SpeechTopic[], state: pool };
 }
 
-function normalizeDegrees(degrees: number) {
-  return ((degrees % 360) + 360) % 360;
-}
-
 function getCategoryIndex(category: TopicCategory) {
   return Math.max(
     0,
-    WHEEL_CATEGORIES.findIndex((item) => item.category === category),
+    WHEEL_POCKETS.findIndex((item) => item.category === category),
   );
 }
 
-function getTargetRotation({
-  currentRotation,
-  targetIndex,
-}: {
-  currentRotation: number;
-  targetIndex: number;
-}) {
-  const sliceAngle = 360 / WHEEL_CATEGORIES.length;
+function getTargetBallAngle(targetIndex: number) {
+  const sliceAngle = 360 / WHEEL_POCKETS.length;
   const sliceCenter = targetIndex * sliceAngle + sliceAngle / 2;
-  const desiredRotation = normalizeDegrees(360 - sliceCenter);
-  const current = normalizeDegrees(currentRotation);
-  const delta = normalizeDegrees(desiredRotation - current);
-  const fullTurns = 6 + Math.floor(Math.random() * 3);
+  const entryWobble = (Math.random() - 0.5) * (sliceAngle * 0.45);
 
-  return currentRotation + fullTurns * 360 + delta;
+  return 360 * 8 + sliceCenter + entryWobble;
 }
 
 function countWords(text: string) {
@@ -280,8 +281,11 @@ function buildSuggestions({
   return suggestions.slice(0, 4);
 }
 
-function playCue(kind: "roll" | "land" | "start" | "finish") {
-  if (typeof window === "undefined") {
+function playCue(
+  kind: "click" | "tick" | "orbit" | "land" | "start" | "finish",
+  muted = false,
+) {
+  if (typeof window === "undefined" || muted) {
     return;
   }
 
@@ -298,23 +302,29 @@ function playCue(kind: "roll" | "land" | "start" | "finish") {
   const now = context.currentTime;
   const master = context.createGain();
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(kind === "roll" ? 0.16 : 0.1, now + 0.01);
-  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  master.gain.exponentialRampToValueAtTime(kind === "orbit" ? 0.08 : 0.12, now + 0.01);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "orbit" ? 0.8 : 0.4));
   master.connect(context.destination);
 
   const hits =
-    kind === "roll"
+    kind === "orbit"
       ? [
-          { at: 0, freq: 92 },
-          { at: 0.08, freq: 118 },
-          { at: 0.18, freq: 76 },
-          { at: 0.31, freq: 104 },
+          { at: 0, freq: 110 },
+          { at: 0.18, freq: 132 },
+          { at: 0.36, freq: 118 },
         ]
       : kind === "land"
         ? [
-            { at: 0, freq: 72 },
-            { at: 0.09, freq: 58 },
+            { at: 0, freq: 74 },
+            { at: 0.08, freq: 48 },
           ]
+        : kind === "tick"
+          ? [{ at: 0, freq: 980 }]
+          : kind === "click"
+            ? [
+                { at: 0, freq: 160 },
+                { at: 0.035, freq: 80 },
+              ]
         : kind === "start"
           ? [{ at: 0, freq: 440 }]
           : [{ at: 0, freq: 220 }];
@@ -322,39 +332,51 @@ function playCue(kind: "roll" | "land" | "start" | "finish") {
   for (const hit of hits) {
     const oscillator = context.createOscillator();
     const gain = context.createGain();
-    oscillator.type = kind === "roll" || kind === "land" ? "triangle" : "sine";
+    oscillator.type = kind === "orbit" || kind === "land" || kind === "click" ? "triangle" : "sine";
     oscillator.frequency.setValueAtTime(hit.freq, now + hit.at);
     oscillator.frequency.exponentialRampToValueAtTime(
       Math.max(32, hit.freq * 0.55),
-      now + hit.at + 0.16,
+      now + hit.at + (kind === "tick" ? 0.04 : 0.16),
     );
     gain.gain.setValueAtTime(0.0001, now + hit.at);
-    gain.gain.exponentialRampToValueAtTime(0.9, now + hit.at + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + hit.at + 0.19);
+    gain.gain.exponentialRampToValueAtTime(kind === "tick" ? 0.32 : 0.9, now + hit.at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + hit.at + (kind === "tick" ? 0.055 : 0.19));
     oscillator.connect(gain);
     gain.connect(master);
     oscillator.start(now + hit.at);
-    oscillator.stop(now + hit.at + 0.22);
+    oscillator.stop(now + hit.at + (kind === "tick" ? 0.07 : 0.22));
   }
 
-  window.setTimeout(() => void context.close(), 700);
+  window.setTimeout(() => void context.close(), kind === "orbit" ? 900 : 500);
+}
+
+function scheduleRouletteTicks(muted: boolean) {
+  const tickTimes = [
+    90, 170, 250, 330, 410, 500, 600, 715, 845, 990, 1150, 1330, 1530, 1760,
+    2020, 2320, 2680, 3070, 3460, 3820, 4140,
+  ];
+
+  tickTimes.forEach((time) => {
+    window.setTimeout(() => playCue("tick", muted), time);
+  });
 }
 
 export function SpeechDeckApp() {
   const initialDraw = useMemo(buildInitialPool, []);
   const [screen, setScreen] = useState<Screen>("roll");
   const [pool, setPool] = useState<TopicPoolState>(initialDraw.state);
-  const [topics, setTopics] = useState<SpeechTopic[]>(initialDraw.hand);
   const [activeTopic, setActiveTopic] = useState<SpeechTopic | null>(null);
   const [hasRolled, setHasRolled] = useState(false);
   const [wheel, setWheel] = useState<WheelState>({
     ballRotation: 0,
+    ballRadius: 0.39,
     rotation: 0,
     selectedCategory: null,
     spinning: false,
     spinId: 0,
   });
   const [spinsLeft, setSpinsLeft] = useState(MAX_SPINS);
+  const [muted, setMuted] = useState(false);
   const [duration, setDuration] = useState(DEFAULT_SECONDS);
   const [remaining, setRemaining] = useState(DEFAULT_SECONDS);
   const [status, setStatus] = useState<PracticeStatus>("idle");
@@ -407,38 +429,45 @@ export function SpeechDeckApp() {
       return;
     }
 
-    playCue("roll");
+    playCue("click", muted);
+    window.setTimeout(() => playCue("orbit", muted), 130);
+    scheduleRouletteTicks(muted);
     const result = drawHand(pool, TOPICS, { size: 1 });
     const chosenTopic = result.hand[0] ?? TOPICS[0];
     const targetIndex = getCategoryIndex(chosenTopic.category);
-    const rotation = getTargetRotation({
-      currentRotation: wheel.rotation,
-      targetIndex,
-    });
-    const sliceAngle = 360 / WHEEL_CATEGORIES.length;
-    const ballRotation = rotation * -0.72 + targetIndex * sliceAngle + 900;
+    const ballRotation = getTargetBallAngle(targetIndex);
 
     setWheel((current) => ({
+      ...current,
       ballRotation,
-      rotation,
+      ballRadius: 0.39,
       selectedCategory: chosenTopic.category,
       spinning: true,
       spinId: current.spinId + 1,
     }));
+    setHasRolled(false);
     setSpinsLeft((current) => Math.max(0, current - 1));
 
     window.setTimeout(() => {
+      setWheel((current) => ({
+        ...current,
+        ballRadius: 0.31,
+        ballRotation: ballRotation + 120,
+      }));
+    }, 2450);
+
+    window.setTimeout(() => {
       setPool(recordLockedTopic(result.state, chosenTopic));
-      setTopics(result.hand);
       setActiveTopic(chosenTopic);
-      setHasRolled(true);
       setRemaining(duration);
       setWheel((current) => ({
         ...current,
-        ballRotation: 0,
+        ballRadius: 0.26,
+        ballRotation: ballRotation + 172,
         spinning: false,
       }));
-      playCue("land");
+      playCue("land", muted);
+      window.setTimeout(() => setHasRolled(true), 520);
     }, SPIN_DURATION_MS);
   }
 
@@ -448,7 +477,7 @@ export function SpeechDeckApp() {
       return;
     }
 
-    playCue("start");
+    playCue("start", muted);
     setScreen("practice");
     setStatus("recording");
     setRemaining(duration);
@@ -538,7 +567,7 @@ export function SpeechDeckApp() {
   }
 
   function finishPractice() {
-    playCue("finish");
+    playCue("finish", muted);
     setStatus("finished");
     recognitionRef.current?.stop();
     setScreen("review");
@@ -562,14 +591,15 @@ export function SpeechDeckApp() {
           activeTopic={activeTopic}
           duration={duration}
           hasRolled={hasRolled}
+          muted={muted}
           onDurationChange={(nextDuration) => {
             setDuration(nextDuration);
             setRemaining(nextDuration);
           }}
           onSpin={spinWheel}
           onStart={startPractice}
+          onToggleMute={() => setMuted((current) => !current)}
           spinsLeft={spinsLeft}
-          topics={topics}
           wheel={wheel}
         />
       ) : null}
@@ -622,105 +652,75 @@ function RollScreen({
   activeTopic,
   duration,
   hasRolled,
+  muted,
   onDurationChange,
   onSpin,
   onStart,
+  onToggleMute,
   spinsLeft,
-  topics,
   wheel,
 }: {
   activeTopic: SpeechTopic | null;
   duration: number;
   hasRolled: boolean;
+  muted: boolean;
   onDurationChange: (duration: number) => void;
   onSpin: () => void;
   onStart: () => void;
+  onToggleMute: () => void;
   spinsLeft: number;
-  topics: SpeechTopic[];
   wheel: WheelState;
 }) {
-  const ghostTopic =
-    activeTopic && topics.find((topic) => topic.id !== activeTopic.id)
-      ? topics.find((topic) => topic.id !== activeTopic.id)
-      : null;
-
   return (
-    <section className="welcome-screen" aria-label="Topic spin">
-      <header className="top-bar">
-        <p className="mode-label">Random Topics</p>
+    <section className="welcome-screen spin-screen" aria-label="Topic spin">
+      <header className="spin-chrome">
+        <button className="table-link" type="button">
+          Offscript
+        </button>
+        <label className="mini-pill table-setting">
+          Time
+          <select
+            value={duration}
+            onChange={(event) => onDurationChange(Number(event.target.value))}
+          >
+            <option value={30}>0:30</option>
+            <option value={60}>1:00</option>
+            <option value={90}>1:30</option>
+            <option value={120}>2:00</option>
+          </select>
+        </label>
+        <button className="table-link" type="button" onClick={onToggleMute}>
+          {muted ? "Sound off" : "Sound on"}
+        </button>
       </header>
 
-      <section className="hero-layout">
-        <div className="hero-copy">
-          <p className="eyebrow">practice without a script</p>
-          <h1 className="brand-mark">Offscript</h1>
-          <p className="brand-copy">
-            A speaking drill that makes the prompt feel like a scene: spin,
-            commit, speak, then see the words you actually used.
-          </p>
-          <button className="primary-pill analysis-cta" type="button" onClick={onStart}>
-            {hasRolled ? "Start speaking" : "Spin first"}
+      <RouletteWheel
+        onSpin={onSpin}
+        spinsLeft={spinsLeft}
+        wheel={wheel}
+      />
+
+      <div className="spin-actions">
+        <button
+          className="primary-pill"
+          disabled={wheel.spinning || spinsLeft <= 0}
+          type="button"
+          onClick={onSpin}
+        >
+          {wheel.spinning ? "Ball in motion" : hasRolled ? "Spin again" : "Spin for topic"}
+        </button>
+      </div>
+
+      {hasRolled && activeTopic && !wheel.spinning ? (
+        <section className="topic-reveal" aria-live="polite">
+          <p>{activeTopic.category}</p>
+          <h1>{activeTopic.prompt}</h1>
+          <span>{activeTopic.trains}</span>
+          <button className="primary-pill" type="button" onClick={onStart}>
+            Start timer →
           </button>
-        </div>
-
-        <div className="topic-area">
-          <div className="soft-controls" aria-label="Session settings">
-            <label className="mini-pill">
-              Time
-              <select
-                value={duration}
-                onChange={(event) => onDurationChange(Number(event.target.value))}
-              >
-                <option value={30}>0:30</option>
-                <option value={60}>1:00</option>
-                <option value={90}>1:30</option>
-                <option value={120}>2:00</option>
-              </select>
-            </label>
-            <span className="mini-pill">Improvisation</span>
-          </div>
-
-          <div className="topic-stack-soft" data-revealed={hasRolled ? "true" : "false"} aria-live="polite">
-            {hasRolled && activeTopic ? (
-              <>
-                {ghostTopic ? <p className="ghost-topic">{ghostTopic.prompt}</p> : null}
-                <h1>{activeTopic.prompt}</h1>
-                <p className="ghost-topic lower">{activeTopic.trains}</p>
-              </>
-            ) : (
-              <div className="topic-veil">
-                <p>Topic hidden</p>
-                <strong>Spin the wheel to reveal the prompt.</strong>
-              </div>
-            )}
-          </div>
-
-          <RouletteWheel
-            onSpin={onSpin}
-            spinsLeft={spinsLeft}
-            wheel={wheel}
-          />
-
-          <div className="main-actions">
-            <button
-              className="primary-pill"
-              disabled={wheel.spinning || spinsLeft <= 0}
-              type="button"
-              onClick={onSpin}
-            >
-              {wheel.spinning ? "Spinning..." : "Spin wheel"}
-            </button>
-            <button
-              className="secondary-pill"
-              disabled={!hasRolled || wheel.spinning}
-              type="button"
-              onClick={onStart}
-            >
-              Start timer →
-            </button>
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -734,7 +734,7 @@ function RouletteWheel({
   spinsLeft: number;
   wheel: WheelState;
 }) {
-  const sliceAngle = 360 / WHEEL_CATEGORIES.length;
+  const sliceAngle = 360 / WHEEL_POCKETS.length;
   const winningIndex = wheel.selectedCategory
     ? getCategoryIndex(wheel.selectedCategory)
     : -1;
@@ -751,11 +751,19 @@ function RouletteWheel({
         type="button"
         aria-label="Spin topic wheel"
       >
-        <span className="rim-studs" aria-hidden="true">
-          {Array.from({ length: 24 }, (_, index) => (
+        <span className="rim-studs bowl-markers" aria-hidden="true">
+          {Array.from({ length: 32 }, (_, index) => (
             <span
               key={index}
-              style={{ "--stud-angle": `${index * 15}deg` } as CSSProperties}
+              style={{ "--stud-angle": `${index * 11.25}deg` } as CSSProperties}
+            />
+          ))}
+        </span>
+        <span className="raised-frets" aria-hidden="true">
+          {WHEEL_POCKETS.map((_, index) => (
+            <span
+              key={index}
+              style={{ "--fret-angle": `${index * sliceAngle}deg` } as CSSProperties}
             />
           ))}
         </span>
@@ -764,7 +772,7 @@ function RouletteWheel({
           data-spinning={wheel.spinning ? "true" : "false"}
           style={{ "--wheel-rotation": `${wheel.rotation}deg` } as CSSProperties}
         >
-          {WHEEL_CATEGORIES.map((item, index) => {
+          {WHEEL_POCKETS.map((item, index) => {
             const angle = index * sliceAngle + sliceAngle / 2;
             const isWinner = !wheel.spinning && winningIndex === index;
 
@@ -772,14 +780,14 @@ function RouletteWheel({
               <span
                 className="wheel-label"
                 data-winner={isWinner ? "true" : "false"}
-                key={item.category}
+                key={`${item.category}-${index}`}
                 style={
                   {
                     "--label-angle": `${angle}deg`,
                   } as CSSProperties
                 }
               >
-                {item.category}
+                {item.label}
               </span>
             );
           })}
@@ -800,7 +808,12 @@ function RouletteWheel({
         <span
           className="roulette-ball"
           data-spinning={wheel.spinning ? "true" : "false"}
-          style={{ "--ball-rotation": `${wheel.ballRotation}deg` } as CSSProperties}
+          style={
+            {
+              "--ball-radius": wheel.ballRadius,
+              "--ball-rotation": `${wheel.ballRotation}deg`,
+            } as CSSProperties
+          }
           aria-hidden="true"
         />
         <span className="roulette-hub">
