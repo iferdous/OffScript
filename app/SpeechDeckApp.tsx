@@ -741,10 +741,6 @@ function RouletteWheel({
 
   return (
     <section className="roulette-table" aria-label="Category roulette wheel">
-      <div className="spin-count" aria-live="polite">
-        <span>{spinsLeft}</span>
-        spins left
-      </div>
       <div className="roulette-pointer" aria-hidden="true">
         <span />
       </div>
@@ -779,16 +775,27 @@ function RouletteWheel({
                 key={item.category}
                 style={
                   {
-                    "--badge-color": item.color,
                     "--label-angle": `${angle}deg`,
                   } as CSSProperties
                 }
               >
-                <span>{item.short}</span>
-                <strong>{item.category}</strong>
+                {item.category}
               </span>
             );
           })}
+        </span>
+        <span className="spin-tokens" aria-label={`${spinsLeft} spins left`}>
+          {Array.from({ length: MAX_SPINS }, (_, index) => (
+            <span
+              data-filled={index < spinsLeft ? "true" : "false"}
+              key={index}
+              style={
+                {
+                  "--token-angle": `${124 + index * 28}deg`,
+                } as CSSProperties
+              }
+            />
+          ))}
         </span>
         <span
           className="roulette-ball"
@@ -798,7 +805,6 @@ function RouletteWheel({
         />
         <span className="roulette-hub">
           <span>Offscript</span>
-          <strong>{wheel.spinning ? "Spin" : "Tap"}</strong>
         </span>
       </button>
     </section>
