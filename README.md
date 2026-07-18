@@ -1,19 +1,20 @@
-# OutLoud Deck
+# Offscript
 
-OutLoud Deck is a local-first public speaking practice app centered on a
-smarter random topic generator. Instead of a slot-machine spin, it presents a
-three-card deck, asks the speaker to commit, and keeps a short session trail so
-practice feels deliberate.
+Offscript is a local-first public speaking practice app for getting better when
+there is no script in front of you. Roll the dice for a hidden topic, speak
+against a timer, then review the raw transcript, cleaned version, filler words,
+pace, and concrete suggestions.
 
 ## Current V1 Focus
 
-- Three-topic deck stack with a lock-in action
+- Casino-inspired dice roll topic reveal with sound cues
+- Hidden topic until the dice settle, then a committed speaking prompt
 - No-repeat shuffled topic pool that only reshuffles after the full pool is used
 - Category guard so the next draw avoids repeating the last locked category
-- Two limited redraws per session
-- "Why this one" skill tag for every topic
-- Speaking timer and last-10 topic history
-- Music/performance-inspired UI with motion ribbons and a social preview image
+- Timed speaking screen with browser mic transcription and manual fallback
+- Review screen with raw transcript, cleaned transcript, filler counts, WPM, and
+  improvement suggestions
+- Local Vite app: no OpenAI hosting, no login flow
 
 ## Development
 
@@ -26,15 +27,15 @@ npm run lint
 npm test
 ```
 
-`npm run dev` serves the app from local Vite at `http://127.0.0.1:5173/`
-and opens it automatically in your browser.
-There is no external hosting config in this project.
+`npm run dev` serves the app from local Vite at `http://127.0.0.1:5173/` and
+opens it automatically in your browser. If that port is already busy, Vite uses
+the next available localhost port.
 
 `npm test` runs the local production build and topic-engine tests.
 
 ## Project Shape
 
-- `app/SpeechDeckApp.tsx`: interactive deck, lock-in flow, timer, and session UI
+- `app/SpeechDeckApp.tsx`: dice reveal, timer, transcript capture, and review UI
 - `app/data/topics.ts`: topic catalog with categories, skill tags, frameworks,
   and time limits
 - `app/lib/topicEngine.ts`: no-repeat pool, deterministic hydration shuffle, and

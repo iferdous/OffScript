@@ -6,8 +6,10 @@
   --forest-soft: rgba(31, 61, 53, 0.68);
   --lavender: #b8a6e8;
   --gold: #d9a356;
-  --felt: #b1322f;
-  --wood: #7c4a2c;
+  --felt: #254d43;
+  --felt-deep: #17352f;
+  --rail: #d9a356;
+  --rail-dark: #9b6931;
   --paper: #fffaf0;
   --soft-line: rgba(31, 61, 53, 0.18);
 }
@@ -50,7 +52,8 @@ button:disabled {
 
 .app-shell {
   background:
-    radial-gradient(circle at 12% 12%, rgba(217, 163, 86, 0.12), transparent 22rem),
+    radial-gradient(circle at 18% 12%, rgba(217, 163, 86, 0.14), transparent 22rem),
+    radial-gradient(circle at 84% 88%, rgba(184, 166, 232, 0.16), transparent 26rem),
     var(--cream);
   min-height: 100vh;
 }
@@ -72,15 +75,7 @@ button:disabled {
   position: relative;
 }
 
-.pill-tabs {
-  background: rgba(31, 61, 53, 0.08);
-  border-radius: 999px;
-  display: inline-flex;
-  gap: 6px;
-  padding: 5px;
-}
-
-.pill,
+.mode-label,
 .mini-pill,
 .primary-pill,
 .secondary-pill {
@@ -92,28 +87,25 @@ button:disabled {
   white-space: nowrap;
 }
 
-.pill {
-  background: transparent;
-  border: 0;
+.mode-label {
+  background: rgba(31, 61, 53, 0.08);
   color: var(--forest);
   font-family: Arial, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  padding: 0 28px;
-}
-
-.pill.active {
-  background: var(--paper);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin: 0;
+  padding: 0 24px;
+  text-transform: uppercase;
 }
 
 .tiny-wordmark {
   color: var(--forest-soft);
-  font-family: "Comic Sans MS", "Marker Felt", "Bradley Hand", cursive;
+  font-family: Arial, sans-serif;
   font-size: clamp(1.35rem, 2vw, 2rem);
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: 950;
+  letter-spacing: -0.03em;
   margin: 0;
-  transform: rotate(2deg);
 }
 
 .top-bar .tiny-wordmark {
@@ -132,33 +124,47 @@ button:disabled {
 
 .hero-copy {
   justify-self: center;
-  max-width: 430px;
+  max-width: 500px;
+}
+
+.eyebrow {
+  color: var(--gold);
+  font-family: Arial, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  margin: 0 0 18px;
+  text-transform: uppercase;
 }
 
 .brand-mark {
   color: var(--forest);
-  font-family: "Comic Sans MS", "Marker Felt", "Bradley Hand", cursive;
-  font-size: clamp(5.8rem, 10vw, 10.8rem);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(5.2rem, 10vw, 10.2rem);
   font-weight: 900;
-  letter-spacing: -0.06em;
-  line-height: 0.76;
-  margin: 0 0 42px;
-  text-shadow: 0 14px 0 rgba(31, 61, 53, 0.16);
-  transform: rotate(-3deg);
+  font-style: italic;
+  letter-spacing: -0.08em;
+  line-height: 0.82;
+  margin: 0 0 22px;
+  text-shadow: 0 1px 0 var(--cream), 0 16px 0 rgba(184, 166, 232, 0.3);
 }
 
-.hand-list {
+.brand-mark::after {
+  background: var(--gold);
+  border-radius: 999px;
+  content: "";
+  display: block;
+  height: 9px;
+  margin-top: 14px;
+  width: min(58%, 280px);
+}
+
+.brand-copy {
   color: var(--forest-soft);
-  font-family: "Comic Sans MS", "Marker Felt", "Bradley Hand", cursive;
-  font-size: clamp(1.7rem, 2.8vw, 2.5rem);
-  font-weight: 800;
-  line-height: 1.12;
+  font-size: clamp(1.22rem, 2vw, 1.7rem);
+  line-height: 1.25;
   margin: 0 0 24px;
-  padding-left: 36px;
-}
-
-.hand-list li::marker {
-  color: var(--forest);
+  max-width: 460px;
 }
 
 .primary-pill,
@@ -239,7 +245,7 @@ button:disabled {
 .topic-stack-soft {
   margin-bottom: 24px;
   max-width: 560px;
-  min-height: 188px;
+  min-height: 210px;
   text-align: center;
 }
 
@@ -259,6 +265,31 @@ button:disabled {
   margin: 0;
 }
 
+.topic-veil {
+  align-items: center;
+  border-radius: 40px;
+  display: grid;
+  min-height: 190px;
+  outline: 2px dashed rgba(31, 61, 53, 0.16);
+  outline-offset: -12px;
+  padding: 34px;
+}
+
+.topic-veil p {
+  color: rgba(31, 61, 53, 0.42);
+  font-family: Arial, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.topic-veil strong {
+  font-size: clamp(1.6rem, 3.2vw, 2.5rem);
+  line-height: 1.06;
+}
+
 .ghost-topic.lower {
   border-top: 1px solid rgba(31, 61, 53, 0.08);
   padding-top: 18px;
@@ -266,53 +297,71 @@ button:disabled {
 
 .dice-board {
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent),
+    radial-gradient(circle at 46% 58%, rgba(255, 255, 255, 0.08), transparent 12rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 36%),
     var(--felt);
-  border: 18px solid var(--wood);
-  border-radius: 34px;
-  height: min(42vw, 330px);
-  max-width: 560px;
-  min-height: 260px;
+  border: 18px solid var(--rail);
+  border-radius: 40px;
+  height: min(42vw, 360px);
+  max-width: 620px;
+  min-height: 290px;
   overflow: hidden;
   position: relative;
-  width: min(92vw, 560px);
+  transform-style: preserve-3d;
+  width: min(92vw, 620px);
 }
 
 .dice-board::before {
-  border: 3px solid rgba(255, 250, 240, 0.2);
-  border-radius: 18px;
+  border: 2px solid rgba(245, 241, 232, 0.22);
+  border-radius: 24px;
   content: "";
-  inset: 10px;
+  inset: 12px;
+  position: absolute;
+}
+
+.dice-board::after {
+  background:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent),
+    radial-gradient(circle at 12% 110%, rgba(0, 0, 0, 0.24), transparent 15rem);
+  content: "";
+  inset: 0;
+  opacity: 0.85;
+  pointer-events: none;
   position: absolute;
 }
 
 .dice-board[data-rolling="true"] {
-  animation: board-zoom 900ms ease both;
+  animation: table-cinema 1.55s cubic-bezier(0.16, 0.84, 0.22, 1) both;
 }
 
-.felt-label {
-  color: rgba(255, 250, 240, 0.62);
-  font-family: "Comic Sans MS", "Marker Felt", cursive;
-  font-size: 1.15rem;
-  font-weight: 800;
-  left: 28px;
+.table-glow {
+  background: radial-gradient(circle, rgba(184, 166, 232, 0.26), transparent 58%);
+  bottom: -120px;
+  height: 300px;
+  left: 50%;
   position: absolute;
-  top: 20px;
-  transform: rotate(-5deg);
+  transform: translateX(-50%);
+  width: 470px;
+  z-index: 0;
+}
+
+.dice-board[data-rolling="true"] .table-glow {
+  animation: felt-flash 1.4s ease-out both;
 }
 
 .throw-hand {
-  height: 138px;
+  height: 148px;
   opacity: 0;
   position: absolute;
-  right: -30px;
-  top: -28px;
-  transform: rotate(-25deg);
-  width: 172px;
+  right: -52px;
+  top: -42px;
+  transform: rotate(-32deg);
+  width: 192px;
+  z-index: 4;
 }
 
 .dice-board[data-rolling="true"] .throw-hand {
-  animation: hand-throw 900ms ease-out both;
+  animation: hand-throw 1.05s ease-out both;
 }
 
 .hand-palm,
@@ -356,15 +405,19 @@ button:disabled {
 }
 
 .die {
-  background: #fff9eb;
-  border-radius: 14px;
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.8), transparent 28%),
+    #fff9eb;
+  border-radius: 16px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   height: 62px;
+  box-shadow: 0 18px 24px rgba(9, 30, 25, 0.32);
   padding: 9px;
   position: absolute;
   width: 62px;
+  z-index: 3;
 }
 
 .die.first {
@@ -380,11 +433,11 @@ button:disabled {
 }
 
 .dice-board[data-rolling="true"] .die.first {
-  animation: die-one 920ms cubic-bezier(0.15, 0.85, 0.28, 1.1) both;
+  animation: die-one 1.55s cubic-bezier(0.11, 0.84, 0.14, 1.02) both;
 }
 
 .dice-board[data-rolling="true"] .die.second {
-  animation: die-two 920ms cubic-bezier(0.15, 0.85, 0.28, 1.1) both;
+  animation: die-two 1.55s cubic-bezier(0.11, 0.84, 0.14, 1.02) both;
 }
 
 .pip {
@@ -648,78 +701,131 @@ textarea {
   line-height: 1.35;
 }
 
-@keyframes board-zoom {
+@keyframes table-cinema {
   0% {
-    transform: scale(1);
+    transform: perspective(900px) scale(1) rotateX(0deg);
   }
 
-  45% {
-    transform: scale(1.045);
+  34% {
+    transform: perspective(900px) scale(1.08) rotateX(4deg);
+  }
+
+  68% {
+    transform: perspective(900px) scale(1.035) rotateX(2deg);
   }
 
   100% {
-    transform: scale(1);
+    transform: perspective(900px) scale(1) rotateX(0deg);
+  }
+}
+
+@keyframes felt-flash {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: translateX(-50%) scale(1);
+  }
+
+  45% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.16);
   }
 }
 
 @keyframes hand-throw {
   0% {
     opacity: 0;
-    transform: translate(140px, -80px) rotate(-35deg);
+    transform: translate(170px, -90px) rotate(-38deg) scale(0.94);
   }
 
-  24% {
+  20% {
     opacity: 1;
   }
 
-  70% {
+  58% {
     opacity: 1;
-    transform: translate(-160px, 90px) rotate(18deg);
+    transform: translate(-145px, 92px) rotate(18deg) scale(1.05);
   }
 
   100% {
     opacity: 0;
-    transform: translate(-230px, 130px) rotate(30deg);
+    transform: translate(-260px, 148px) rotate(34deg) scale(0.98);
   }
 }
 
 @keyframes die-one {
   0% {
-    left: 87%;
-    top: 2%;
-    transform: rotate(0deg) scale(0.8);
+    left: 92%;
+    top: 0%;
+    transform: rotate(0deg) scale(0.52);
   }
 
-  62% {
-    left: 32%;
-    top: 64%;
-    transform: rotate(520deg) scale(1.1);
+  18% {
+    left: 71%;
+    top: 22%;
+    transform: rotate(220deg) scale(1.28);
+  }
+
+  42% {
+    left: 46%;
+    top: 66%;
+    transform: rotate(680deg) scale(0.96);
+  }
+
+  64% {
+    left: 28%;
+    top: 42%;
+    transform: rotate(940deg) scale(1.16);
+  }
+
+  82% {
+    left: 37%;
+    top: 58%;
+    transform: rotate(1080deg) scale(0.98);
   }
 
   100% {
-    left: 42%;
-    top: 52%;
-    transform: rotate(700deg) scale(1);
+    left: 43%;
+    top: 54%;
+    transform: rotate(1148deg) scale(1);
   }
 }
 
 @keyframes die-two {
   0% {
-    left: 82%;
-    top: 5%;
-    transform: rotate(0deg) scale(0.8);
+    left: 89%;
+    top: 2%;
+    transform: rotate(0deg) scale(0.5);
   }
 
-  66% {
-    left: 62%;
-    top: 56%;
-    transform: rotate(-480deg) scale(1.08);
+  20% {
+    left: 66%;
+    top: 30%;
+    transform: rotate(-260deg) scale(1.24);
+  }
+
+  48% {
+    left: 38%;
+    top: 36%;
+    transform: rotate(-760deg) scale(0.98);
+  }
+
+  70% {
+    left: 64%;
+    top: 62%;
+    transform: rotate(-990deg) scale(1.14);
+  }
+
+  86% {
+    left: 58%;
+    top: 44%;
+    transform: rotate(-1110deg) scale(0.98);
   }
 
   100% {
     left: 61%;
     top: 34%;
-    transform: rotate(-650deg) scale(1);
+    transform: rotate(-1194deg) scale(1);
   }
 }
 
@@ -741,14 +847,6 @@ textarea {
     padding: 18px;
   }
 
-  .top-bar {
-    justify-content: flex-start;
-  }
-
-  .top-bar .tiny-wordmark {
-    display: none;
-  }
-
   .hero-layout {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -757,10 +855,6 @@ textarea {
 
   .hero-copy {
     justify-self: start;
-  }
-
-  .brand-mark {
-    font-size: clamp(5.4rem, 22vw, 8rem);
   }
 
   .transcript-panel,
@@ -785,18 +879,8 @@ textarea {
 }
 
 @media (max-width: 620px) {
-  .pill-tabs {
-    width: 100%;
-  }
-
-  .pill {
-    flex: 1;
-    font-size: 0.76rem;
-    padding: 0 8px;
-  }
-
-  .hand-list {
-    font-size: 1.5rem;
+  .brand-mark {
+    font-size: clamp(4.4rem, 19vw, 6.3rem);
   }
 
   .dice-board {

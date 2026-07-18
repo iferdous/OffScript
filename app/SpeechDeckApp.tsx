@@ -43,6 +43,7 @@ declare global {
   interface Window {
     SpeechRecognition?: SpeechRecognitionConstructor;
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    webkitAudioContext?: typeof AudioContext;
   }
 }
 
@@ -95,7 +96,7 @@ function formatTime(totalSeconds: number) {
 function buildInitialPool() {
   const random = createSeededRandom(20260718);
   const pool = createTopicPool(TOPICS, random);
-  return drawHand(pool, TOPICS, { random, size: HAND_SIZE });
+  return { hand: [] as SpeechTopic[], state: pool };
 }
 
 function countWords(text: string) {
@@ -235,16 +236,77 @@ function buildSuggestions({
   return suggestions.slice(0, 4);
 }
 
+function playCue(kind: "roll" | "land" | "start" | "finish") {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const AudioContext =
+    window.AudioContext ??
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+
+  if (!AudioContext) {
+    return;
+  }
+
+  const context = new AudioContext();
+  const now = context.currentTime;
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(kind === "roll" ? 0.16 : 0.1, now + 0.01);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+  master.connect(context.destination);
+
+  const hits =
+    kind === "roll"
+      ? [
+          { at: 0, freq: 92 },
+          { at: 0.08, freq: 118 },
+          { at: 0.18, freq: 76 },
+          { at: 0.31, freq: 104 },
+        ]
+      : kind === "land"
+        ? [
+            { at: 0, freq: 72 },
+            { at: 0.09, freq: 58 },
+          ]
+        : kind === "start"
+          ? [{ at: 0, freq: 440 }]
+          : [{ at: 0, freq: 220 }];
+
+  for (const hit of hits) {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = kind === "roll" || kind === "land" ? "triangle" : "sine";
+    oscillator.frequency.setValueAtTime(hit.freq, now + hit.at);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(32, hit.freq * 0.55),
+      now + hit.at + 0.16,
+    );
+    gain.gain.setValueAtTime(0.0001, now + hit.at);
+    gain.gain.exponentialRampToValueAtTime(0.9, now + hit.at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + hit.at + 0.19);
+    oscillator.connect(gain);
+    gain.connect(master);
+    oscillator.start(now + hit.at);
+    oscillator.stop(now + hit.at + 0.22);
+  }
+
+  window.setTimeout(() => void context.close(), 700);
+}
+
 export function SpeechDeckApp() {
   const initialDraw = useMemo(buildInitialPool, []);
   const [screen, setScreen] = useState<Screen>("roll");
   const [pool, setPool] = useState<TopicPoolState>(initialDraw.state);
   const [topics, setTopics] = useState<SpeechTopic[]>(initialDraw.hand);
-  const [activeTopic, setActiveTopic] = useState<SpeechTopic>(initialDraw.hand[0]);
+  const [activeTopic, setActiveTopic] = useState<SpeechTopic | null>(null);
+  const [hasRolled, setHasRolled] = useState(false);
   const [dice, setDice] = useState<DiceState>({
-    first: 3,
+    first: 1,
     rolling: false,
-    second: 6,
+    second: 1,
     throwId: 0,
   });
   const [duration, setDuration] = useState(DEFAULT_SECONDS);
@@ -254,17 +316,25 @@ export function SpeechDeckApp() {
   const [interimTranscript, setInterimTranscript] = useState("");
   const [manualTranscript, setManualTranscript] = useState("");
   const [speechError, setSpeechError] = useState("");
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-
   const rawTranscript = [finalTranscript, interimTranscript, manualTranscript]
     .filter(Boolean)
     .join(" ")
     .trim();
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const statusRef = useRef(status);
+  const remainingRef = useRef(remaining);
+  const transcriptRef = useRef(rawTranscript);
   const progress = duration > 0 ? (duration - remaining) / duration : 0;
   const analysis = useMemo(
     () => analyzeSpeech(rawTranscript, duration),
     [duration, rawTranscript],
   );
+
+  useEffect(() => {
+    statusRef.current = status;
+    remainingRef.current = remaining;
+    transcriptRef.current = rawTranscript;
+  }, [rawTranscript, remaining, status]);
 
   useEffect(() => {
     if (status !== "recording") {
@@ -291,6 +361,7 @@ export function SpeechDeckApp() {
       return;
     }
 
+    playCue("roll");
     const first = Math.ceil(Math.random() * 6);
     const second = Math.ceil(Math.random() * 6);
 
@@ -309,12 +380,20 @@ export function SpeechDeckApp() {
       setPool(recordLockedTopic(result.state, chosenTopic));
       setTopics(result.hand);
       setActiveTopic(chosenTopic);
+      setHasRolled(true);
       setRemaining(duration);
       setDice((current) => ({ ...current, rolling: false }));
-    }, 1100);
+      playCue("land");
+    }, 1600);
   }
 
   function startPractice() {
+    if (!activeTopic) {
+      rollDice();
+      return;
+    }
+
+    playCue("start");
     setScreen("practice");
     setStatus("recording");
     setRemaining(duration);
@@ -365,7 +444,7 @@ export function SpeechDeckApp() {
       );
     };
     recognition.onend = () => {
-      if (status === "recording" && remaining > 0) {
+      if (statusRef.current === "recording" && remainingRef.current > 0) {
         try {
           recognition.start();
         } catch {
@@ -379,6 +458,14 @@ export function SpeechDeckApp() {
     } catch {
       setSpeechError("The microphone could not start. You can type the transcript below.");
     }
+
+    window.setTimeout(() => {
+      if (statusRef.current === "recording" && !transcriptRef.current) {
+        setSpeechError(
+          "Still listening, but no words have come back yet. Keep speaking clearly or type the raw transcript below.",
+        );
+      }
+    }, 6000);
   }
 
   function pausePractice() {
@@ -396,6 +483,7 @@ export function SpeechDeckApp() {
   }
 
   function finishPractice() {
+    playCue("finish");
     setStatus("finished");
     recognitionRef.current?.stop();
     setScreen("review");
@@ -419,6 +507,7 @@ export function SpeechDeckApp() {
           activeTopic={activeTopic}
           dice={dice}
           duration={duration}
+          hasRolled={hasRolled}
           onDurationChange={(nextDuration) => {
             setDuration(nextDuration);
             setRemaining(nextDuration);
@@ -431,7 +520,7 @@ export function SpeechDeckApp() {
 
       {screen === "practice" ? (
         <PracticeScreen
-          activeTopic={activeTopic}
+          activeTopic={activeTopic as SpeechTopic}
           duration={duration}
           manualTranscript={manualTranscript}
           onBack={resetPractice}
@@ -454,7 +543,7 @@ export function SpeechDeckApp() {
 
       {screen === "review" ? (
         <ReviewScreen
-          activeTopic={activeTopic}
+          activeTopic={activeTopic as SpeechTopic}
           analysis={analysis}
           duration={duration}
           onNewRoll={resetPractice}
@@ -477,49 +566,42 @@ function RollScreen({
   activeTopic,
   dice,
   duration,
+  hasRolled,
   onDurationChange,
   onRoll,
   onStart,
   topics,
 }: {
-  activeTopic: SpeechTopic;
+  activeTopic: SpeechTopic | null;
   dice: DiceState;
   duration: number;
+  hasRolled: boolean;
   onDurationChange: (duration: number) => void;
   onRoll: () => void;
   onStart: () => void;
   topics: SpeechTopic[];
 }) {
-  const ghostTopic = topics.find((topic) => topic.id !== activeTopic.id) ?? topics[0];
+  const ghostTopic =
+    activeTopic && topics.find((topic) => topic.id !== activeTopic.id)
+      ? topics.find((topic) => topic.id !== activeTopic.id)
+      : null;
 
   return (
     <section className="welcome-screen" aria-label="Topic roll">
       <header className="top-bar">
-        <nav className="pill-tabs" aria-label="Practice modes">
-          <button className="pill active" type="button">
-            Random Topics
-          </button>
-          <button className="pill" type="button">
-            Interview Prep
-          </button>
-          <button className="pill" type="button">
-            Learn Vocab
-          </button>
-        </nav>
-        <p className="tiny-wordmark">Baby steps to the mic</p>
+        <p className="mode-label">Random Topics</p>
       </header>
 
       <section className="hero-layout">
         <div className="hero-copy">
-          <p className="brand-mark">Off the Cuff</p>
-          <ol className="hand-list">
-            <li>Roll for a topic</li>
-            <li>Set your speaking time</li>
-            <li>Talk, transcribe, review</li>
-          </ol>
+          <p className="eyebrow">practice without a script</p>
+          <h1 className="brand-mark">Offscript</h1>
+          <p className="brand-copy">
+            A speaking drill that makes the prompt feel like a scene: roll,
+            commit, speak, then see the words you actually used.
+          </p>
           <button className="primary-pill analysis-cta" type="button" onClick={onStart}>
-            Get speech analysis
-            <span>new</span>
+            {hasRolled ? "Start speaking" : "Roll first"}
           </button>
         </div>
 
@@ -537,14 +619,22 @@ function RollScreen({
                 <option value={120}>2:00</option>
               </select>
             </label>
-            <span className="mini-pill">Medium</span>
-            <span className="mini-pill">Random</span>
+            <span className="mini-pill">Improvisation</span>
           </div>
 
-          <div className="topic-stack-soft" aria-live="polite">
-            <p className="ghost-topic">{ghostTopic?.prompt}</p>
-            <h1>{activeTopic.prompt}</h1>
-            <p className="ghost-topic lower">{activeTopic.trains}</p>
+          <div className="topic-stack-soft" data-revealed={hasRolled ? "true" : "false"} aria-live="polite">
+            {hasRolled && activeTopic ? (
+              <>
+                {ghostTopic ? <p className="ghost-topic">{ghostTopic.prompt}</p> : null}
+                <h1>{activeTopic.prompt}</h1>
+                <p className="ghost-topic lower">{activeTopic.trains}</p>
+              </>
+            ) : (
+              <div className="topic-veil">
+                <p>Topic hidden</p>
+                <strong>Roll the dice to reveal the prompt.</strong>
+              </div>
+            )}
           </div>
 
           <DiceBoard dice={dice} onRoll={onRoll} />
@@ -553,7 +643,12 @@ function RollScreen({
             <button className="primary-pill" type="button" onClick={onRoll}>
               {dice.rolling ? "Rolling..." : "Roll dice"}
             </button>
-            <button className="secondary-pill" type="button" onClick={onStart}>
+            <button
+              className="secondary-pill"
+              disabled={!hasRolled || dice.rolling}
+              type="button"
+              onClick={onStart}
+            >
               Start timer →
             </button>
           </div>
@@ -573,7 +668,7 @@ function DiceBoard({ dice, onRoll }: { dice: DiceState; onRoll: () => void }) {
       type="button"
       aria-label={`Roll dice. Current result ${dice.first} and ${dice.second}`}
     >
-      <span className="felt-label">tap the board</span>
+      <span className="table-glow" aria-hidden="true" />
       <span className="throw-hand" aria-hidden="true">
         <span className="hand-palm" />
         <span className="finger one" />
@@ -650,8 +745,7 @@ function PracticeScreen({
         ← Back
       </button>
       <button className="floating-analysis" type="button" onClick={onFinish}>
-        Get speech analysis
-        <span>new</span>
+        Analyze
       </button>
 
       <div className="practice-topic">
@@ -705,7 +799,7 @@ function PracticeScreen({
           <p className="panel-kicker">Live transcript</p>
           <p className="transcript-text">
             {rawTranscript ||
-              "Start speaking. Your raw words, including filler words, will collect here."}
+              "Start speaking. Your raw words, including filler words, will collect here as the browser returns text."}
           </p>
           {speechError ? <p className="speech-error">{speechError}</p> : null}
         </div>
@@ -739,7 +833,7 @@ function ReviewScreen({
     <section className="review-screen" aria-label="Speech feedback">
       <header className="review-header">
         <div>
-          <p className="tiny-wordmark">Baby steps to the mic</p>
+          <p className="tiny-wordmark">Offscript</p>
           <h1>Here’s what your speech sounded like.</h1>
         </div>
         <div className="review-actions">
