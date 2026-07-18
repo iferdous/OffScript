@@ -1,14 +1,14 @@
 # Offscript
 
 Offscript is a local-first public speaking practice app for getting better when
-there is no script in front of you. Roll the dice for a hidden topic, speak
+there is no script in front of you. Spin the wheel for a hidden topic, speak
 against a timer, then review the raw transcript, cleaned version, filler words,
 pace, and concrete suggestions.
 
 ## Current V1 Focus
 
-- Casino-inspired dice roll topic reveal with sound cues
-- Hidden topic until the dice settle, then a committed speaking prompt
+- Casino-inspired roulette topic reveal with sound cues
+- Hidden topic until the wheel settles, then a committed speaking prompt
 - No-repeat shuffled topic pool that only reshuffles after the full pool is used
 - Category guard so the next draw avoids repeating the last locked category
 - Timed speaking screen with browser mic transcription and manual fallback
@@ -35,7 +35,7 @@ the next available localhost port.
 
 ## Project Shape
 
-- `app/SpeechDeckApp.tsx`: dice reveal, timer, transcript capture, and review UI
+- `app/SpeechDeckApp.tsx`: roulette reveal, timer, transcript capture, and review UI
 - `app/data/topics.ts`: topic catalog with categories, skill tags, frameworks,
   and time limits
 - `app/lib/topicEngine.ts`: no-repeat pool, deterministic hydration shuffle, and

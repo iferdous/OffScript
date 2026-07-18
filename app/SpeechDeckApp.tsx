@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { TOPICS, type SpeechTopic } from "./data/topics";
+import { TOPICS, type SpeechTopic, type TopicCategory } from "./data/topics";
 import {
   createSeededRandom,
   createTopicPool,
@@ -50,11 +50,12 @@ declare global {
 type Screen = "roll" | "practice" | "review";
 type PracticeStatus = "idle" | "recording" | "paused" | "finished";
 
-type DiceState = {
-  first: number;
-  second: number;
-  rolling: boolean;
-  throwId: number;
+type WheelState = {
+  ballRotation: number;
+  rotation: number;
+  selectedCategory: TopicCategory | null;
+  spinning: boolean;
+  spinId: number;
 };
 
 type Analysis = {
@@ -67,8 +68,23 @@ type Analysis = {
   suggestions: string[];
 };
 
-const HAND_SIZE = 2;
 const DEFAULT_SECONDS = 60;
+const MAX_SPINS = 5;
+const SPIN_DURATION_MS = 3200;
+const WHEEL_CATEGORIES: Array<{
+  category: TopicCategory;
+  color: string;
+  short: string;
+}> = [
+  { category: "Culture", color: "#D9A356", short: "Cul" },
+  { category: "Music", color: "#B8A6E8", short: "Mus" },
+  { category: "Identity", color: "#E08F76", short: "Id" },
+  { category: "Work", color: "#6D93B8", short: "Work" },
+  { category: "Opinion", color: "#B85F5B", short: "Take" },
+  { category: "Abstract", color: "#8F7CCB", short: "Abs" },
+  { category: "Story", color: "#D1B15E", short: "Story" },
+  { category: "Community", color: "#6DAA82", short: "Comm" },
+];
 const FILLERS = [
   "um",
   "uh",
@@ -97,6 +113,34 @@ function buildInitialPool() {
   const random = createSeededRandom(20260718);
   const pool = createTopicPool(TOPICS, random);
   return { hand: [] as SpeechTopic[], state: pool };
+}
+
+function normalizeDegrees(degrees: number) {
+  return ((degrees % 360) + 360) % 360;
+}
+
+function getCategoryIndex(category: TopicCategory) {
+  return Math.max(
+    0,
+    WHEEL_CATEGORIES.findIndex((item) => item.category === category),
+  );
+}
+
+function getTargetRotation({
+  currentRotation,
+  targetIndex,
+}: {
+  currentRotation: number;
+  targetIndex: number;
+}) {
+  const sliceAngle = 360 / WHEEL_CATEGORIES.length;
+  const sliceCenter = targetIndex * sliceAngle + sliceAngle / 2;
+  const desiredRotation = normalizeDegrees(360 - sliceCenter);
+  const current = normalizeDegrees(currentRotation);
+  const delta = normalizeDegrees(desiredRotation - current);
+  const fullTurns = 6 + Math.floor(Math.random() * 3);
+
+  return currentRotation + fullTurns * 360 + delta;
 }
 
 function countWords(text: string) {
@@ -303,12 +347,14 @@ export function SpeechDeckApp() {
   const [topics, setTopics] = useState<SpeechTopic[]>(initialDraw.hand);
   const [activeTopic, setActiveTopic] = useState<SpeechTopic | null>(null);
   const [hasRolled, setHasRolled] = useState(false);
-  const [dice, setDice] = useState<DiceState>({
-    first: 1,
-    rolling: false,
-    second: 1,
-    throwId: 0,
+  const [wheel, setWheel] = useState<WheelState>({
+    ballRotation: 0,
+    rotation: 0,
+    selectedCategory: null,
+    spinning: false,
+    spinId: 0,
   });
+  const [spinsLeft, setSpinsLeft] = useState(MAX_SPINS);
   const [duration, setDuration] = useState(DEFAULT_SECONDS);
   const [remaining, setRemaining] = useState(DEFAULT_SECONDS);
   const [status, setStatus] = useState<PracticeStatus>("idle");
@@ -356,40 +402,49 @@ export function SpeechDeckApp() {
     return () => window.clearInterval(timer);
   }, [status]);
 
-  function rollDice() {
-    if (dice.rolling) {
+  function spinWheel() {
+    if (wheel.spinning || spinsLeft <= 0) {
       return;
     }
 
     playCue("roll");
-    const first = Math.ceil(Math.random() * 6);
-    const second = Math.ceil(Math.random() * 6);
+    const result = drawHand(pool, TOPICS, { size: 1 });
+    const chosenTopic = result.hand[0] ?? TOPICS[0];
+    const targetIndex = getCategoryIndex(chosenTopic.category);
+    const rotation = getTargetRotation({
+      currentRotation: wheel.rotation,
+      targetIndex,
+    });
+    const sliceAngle = 360 / WHEEL_CATEGORIES.length;
+    const ballRotation = rotation * -0.72 + targetIndex * sliceAngle + 900;
 
-    setDice((current) => ({
-      first,
-      rolling: true,
-      second,
-      throwId: current.throwId + 1,
+    setWheel((current) => ({
+      ballRotation,
+      rotation,
+      selectedCategory: chosenTopic.category,
+      spinning: true,
+      spinId: current.spinId + 1,
     }));
+    setSpinsLeft((current) => Math.max(0, current - 1));
 
     window.setTimeout(() => {
-      const result = drawHand(pool, TOPICS, { size: HAND_SIZE });
-      const chosenIndex = (first + second) % result.hand.length;
-      const chosenTopic = result.hand[chosenIndex] ?? result.hand[0];
-
       setPool(recordLockedTopic(result.state, chosenTopic));
       setTopics(result.hand);
       setActiveTopic(chosenTopic);
       setHasRolled(true);
       setRemaining(duration);
-      setDice((current) => ({ ...current, rolling: false }));
+      setWheel((current) => ({
+        ...current,
+        ballRotation: 0,
+        spinning: false,
+      }));
       playCue("land");
-    }, 1600);
+    }, SPIN_DURATION_MS);
   }
 
   function startPractice() {
     if (!activeTopic) {
-      rollDice();
+      spinWheel();
       return;
     }
 
@@ -505,16 +560,17 @@ export function SpeechDeckApp() {
       {screen === "roll" ? (
         <RollScreen
           activeTopic={activeTopic}
-          dice={dice}
           duration={duration}
           hasRolled={hasRolled}
           onDurationChange={(nextDuration) => {
             setDuration(nextDuration);
             setRemaining(nextDuration);
           }}
-          onRoll={rollDice}
+          onSpin={spinWheel}
           onStart={startPractice}
+          spinsLeft={spinsLeft}
           topics={topics}
+          wheel={wheel}
         />
       ) : null}
 
@@ -546,7 +602,7 @@ export function SpeechDeckApp() {
           activeTopic={activeTopic as SpeechTopic}
           analysis={analysis}
           duration={duration}
-          onNewRoll={resetPractice}
+          onNewSpin={resetPractice}
           onRetry={() => {
             setScreen("practice");
             setStatus("idle");
@@ -564,22 +620,24 @@ export function SpeechDeckApp() {
 
 function RollScreen({
   activeTopic,
-  dice,
   duration,
   hasRolled,
   onDurationChange,
-  onRoll,
+  onSpin,
   onStart,
+  spinsLeft,
   topics,
+  wheel,
 }: {
   activeTopic: SpeechTopic | null;
-  dice: DiceState;
   duration: number;
   hasRolled: boolean;
   onDurationChange: (duration: number) => void;
-  onRoll: () => void;
+  onSpin: () => void;
   onStart: () => void;
+  spinsLeft: number;
   topics: SpeechTopic[];
+  wheel: WheelState;
 }) {
   const ghostTopic =
     activeTopic && topics.find((topic) => topic.id !== activeTopic.id)
@@ -587,7 +645,7 @@ function RollScreen({
       : null;
 
   return (
-    <section className="welcome-screen" aria-label="Topic roll">
+    <section className="welcome-screen" aria-label="Topic spin">
       <header className="top-bar">
         <p className="mode-label">Random Topics</p>
       </header>
@@ -597,11 +655,11 @@ function RollScreen({
           <p className="eyebrow">practice without a script</p>
           <h1 className="brand-mark">Offscript</h1>
           <p className="brand-copy">
-            A speaking drill that makes the prompt feel like a scene: roll,
+            A speaking drill that makes the prompt feel like a scene: spin,
             commit, speak, then see the words you actually used.
           </p>
           <button className="primary-pill analysis-cta" type="button" onClick={onStart}>
-            {hasRolled ? "Start speaking" : "Roll first"}
+            {hasRolled ? "Start speaking" : "Spin first"}
           </button>
         </div>
 
@@ -632,20 +690,29 @@ function RollScreen({
             ) : (
               <div className="topic-veil">
                 <p>Topic hidden</p>
-                <strong>Roll the dice to reveal the prompt.</strong>
+                <strong>Spin the wheel to reveal the prompt.</strong>
               </div>
             )}
           </div>
 
-          <DiceBoard dice={dice} onRoll={onRoll} />
+          <RouletteWheel
+            onSpin={onSpin}
+            spinsLeft={spinsLeft}
+            wheel={wheel}
+          />
 
           <div className="main-actions">
-            <button className="primary-pill" type="button" onClick={onRoll}>
-              {dice.rolling ? "Rolling..." : "Roll dice"}
+            <button
+              className="primary-pill"
+              disabled={wheel.spinning || spinsLeft <= 0}
+              type="button"
+              onClick={onSpin}
+            >
+              {wheel.spinning ? "Spinning..." : "Spin wheel"}
             </button>
             <button
               className="secondary-pill"
-              disabled={!hasRolled || dice.rolling}
+              disabled={!hasRolled || wheel.spinning}
               type="button"
               onClick={onStart}
             >
@@ -658,54 +725,84 @@ function RollScreen({
   );
 }
 
-function DiceBoard({ dice, onRoll }: { dice: DiceState; onRoll: () => void }) {
-  return (
-    <button
-      className="dice-board"
-      data-rolling={dice.rolling ? "true" : "false"}
-      key={dice.throwId}
-      onClick={onRoll}
-      type="button"
-      aria-label={`Roll dice. Current result ${dice.first} and ${dice.second}`}
-    >
-      <span className="table-glow" aria-hidden="true" />
-      <span className="throw-hand" aria-hidden="true">
-        <span className="hand-palm" />
-        <span className="finger one" />
-        <span className="finger two" />
-        <span className="finger three" />
-      </span>
-      <Die value={dice.first} className="die first" />
-      <Die value={dice.second} className="die second" />
-    </button>
-  );
-}
+function RouletteWheel({
+  onSpin,
+  spinsLeft,
+  wheel,
+}: {
+  onSpin: () => void;
+  spinsLeft: number;
+  wheel: WheelState;
+}) {
+  const sliceAngle = 360 / WHEEL_CATEGORIES.length;
+  const winningIndex = wheel.selectedCategory
+    ? getCategoryIndex(wheel.selectedCategory)
+    : -1;
 
-function Die({ className, value }: { className: string; value: number }) {
   return (
-    <span className={className} style={{ "--die-value": value } as CSSProperties}>
-      {Array.from({ length: 6 }, (_, index) => (
+    <section className="roulette-table" aria-label="Category roulette wheel">
+      <div className="spin-count" aria-live="polite">
+        <span>{spinsLeft}</span>
+        spins left
+      </div>
+      <div className="roulette-pointer" aria-hidden="true">
+        <span />
+      </div>
+      <button
+        className="roulette-stage"
+        disabled={wheel.spinning || spinsLeft <= 0}
+        onClick={onSpin}
+        type="button"
+        aria-label="Spin topic wheel"
+      >
+        <span className="rim-studs" aria-hidden="true">
+          {Array.from({ length: 24 }, (_, index) => (
+            <span
+              key={index}
+              style={{ "--stud-angle": `${index * 15}deg` } as CSSProperties}
+            />
+          ))}
+        </span>
         <span
-          className="pip"
-          data-visible={isPipVisible(value, index) ? "true" : "false"}
-          key={index}
+          className="roulette-wheel"
+          data-spinning={wheel.spinning ? "true" : "false"}
+          style={{ "--wheel-rotation": `${wheel.rotation}deg` } as CSSProperties}
+        >
+          {WHEEL_CATEGORIES.map((item, index) => {
+            const angle = index * sliceAngle + sliceAngle / 2;
+            const isWinner = !wheel.spinning && winningIndex === index;
+
+            return (
+              <span
+                className="wheel-label"
+                data-winner={isWinner ? "true" : "false"}
+                key={item.category}
+                style={
+                  {
+                    "--badge-color": item.color,
+                    "--label-angle": `${angle}deg`,
+                  } as CSSProperties
+                }
+              >
+                <span>{item.short}</span>
+                <strong>{item.category}</strong>
+              </span>
+            );
+          })}
+        </span>
+        <span
+          className="roulette-ball"
+          data-spinning={wheel.spinning ? "true" : "false"}
+          style={{ "--ball-rotation": `${wheel.ballRotation}deg` } as CSSProperties}
+          aria-hidden="true"
         />
-      ))}
-    </span>
+        <span className="roulette-hub">
+          <span>Offscript</span>
+          <strong>{wheel.spinning ? "Spin" : "Tap"}</strong>
+        </span>
+      </button>
+    </section>
   );
-}
-
-function isPipVisible(value: number, index: number) {
-  const map: Record<number, number[]> = {
-    1: [4],
-    2: [0, 5],
-    3: [0, 4, 5],
-    4: [0, 2, 3, 5],
-    5: [0, 2, 3, 4, 5],
-    6: [0, 1, 2, 3, 4, 5],
-  };
-
-  return map[value]?.includes(index) ?? false;
 }
 
 function PracticeScreen({
@@ -818,14 +915,14 @@ function ReviewScreen({
   activeTopic,
   analysis,
   duration,
-  onNewRoll,
+  onNewSpin,
   onRetry,
   rawTranscript,
 }: {
   activeTopic: SpeechTopic;
   analysis: Analysis;
   duration: number;
-  onNewRoll: () => void;
+  onNewSpin: () => void;
   onRetry: () => void;
   rawTranscript: string;
 }) {
@@ -840,8 +937,8 @@ function ReviewScreen({
           <button className="secondary-pill" type="button" onClick={onRetry}>
             Try same topic
           </button>
-          <button className="primary-pill" type="button" onClick={onNewRoll}>
-            Roll again
+          <button className="primary-pill" type="button" onClick={onNewSpin}>
+            Spin again
           </button>
         </div>
       </header>
