@@ -914,6 +914,50 @@ button:disabled {
   animation: lever-pull 480ms both;
 }
 
+.lever-callout {
+  color: #f5f1e8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0;
+  position: absolute;
+  right: -154px;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+  top: 30px;
+  transform: rotate(-5deg);
+  width: 144px;
+  z-index: 4;
+}
+
+.lever-callout span {
+  background: rgba(245, 241, 232, 0.1);
+  border: 1px solid rgba(240, 217, 140, 0.42);
+  border-radius: 999px;
+  display: inline-block;
+  padding: 4px 12px 5px;
+}
+
+.lever-callout svg {
+  display: block;
+  fill: none;
+  height: 68px;
+  margin-top: -2px;
+  overflow: visible;
+  stroke: #e8c97a;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+  transform: rotate(11deg);
+  width: 142px;
+}
+
+.lever-callout path:nth-child(3) {
+  opacity: 0.58;
+  stroke-width: 3;
+}
+
 .coin-tray {
   background:
     linear-gradient(145deg, #11100e, #221d17);

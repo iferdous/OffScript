@@ -1118,6 +1118,17 @@ function SlotMachine({
         <span aria-hidden="true" />
       </button>
 
+      {!disabled ? (
+        <div className="lever-callout" aria-hidden="true">
+          <span>click me</span>
+          <svg viewBox="0 0 142 68" role="img">
+            <path d="M8 48 C 34 16, 74 10, 112 28" />
+            <path d="M102 16 L 124 32 L 96 40" />
+            <path d="M28 42 C 32 48, 42 50, 48 44" />
+          </svg>
+        </div>
+      ) : null}
+
       <div className="bottom-plinth" aria-hidden="true" />
     </section>
   );
