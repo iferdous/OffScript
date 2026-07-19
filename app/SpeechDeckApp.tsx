@@ -793,7 +793,11 @@ function RollScreen({
   return (
     <section className="welcome-screen" aria-label="Offscript topic practice">
       <header className="top-bar">
-        <span className="mode-label">Random Topics</span>
+        <nav className="mode-nav" aria-label="Practice modes">
+          <span className="mode-label">Random Topics</span>
+          <span className="mode-label mode-label-disabled">Interview Prep</span>
+          <span className="mode-label mode-label-disabled">Learn Vocab</span>
+        </nav>
       </header>
 
       <section className="landing-grid">
@@ -801,9 +805,8 @@ function RollScreen({
           <p className="wordmark">Offscript</p>
           <h1>Walk in with foggy thoughts. Walk out clearer.</h1>
           <p>
-            Pull for an unrehearsed prompt, set a speaking window, then review
-            the exact words you used, the fillers you leaned on, and the rhythm
-            of your answer.
+            Pull the lever for an unrehearsed topic. Set your speaking window,
+            then talk it out: no notes, no script, no do-overs.
           </p>
           <div className="landing-filters" aria-label="Topic setup filters">
             <LandingFilterMenu
@@ -858,7 +861,7 @@ function RollScreen({
           </div>
           <div className="main-actions">
             <button className="primary-pill" type="button" onClick={onOpenSlot}>
-              Open topic slot
+              Pull a topic
             </button>
             {activeTopic ? (
               <button className="secondary-pill" type="button" onClick={onStart}>
@@ -870,10 +873,7 @@ function RollScreen({
         <button className="slot-preview" type="button" onClick={onOpenSlot}>
           <span className="preview-marquee">OFFSCRIPT</span>
           <span className="preview-reel">
-            <span>{activeTopic ? activeTopic.category : "Pull for topic"}</span>
-            <small>
-              {activeTopic ? activeTopic.prompt : "Three pulls per session"}
-            </small>
+            <span>{activeTopic ? activeTopic.prompt : "Pull for topic"}</span>
           </span>
           <span className="preview-tray" aria-hidden="true">
             {Array.from({ length: MAX_SPINS }, (_, index) => (
@@ -1054,6 +1054,7 @@ function SlotMachine({
   spinsLeft: number;
 }) {
   const disabled = slot.primed || slot.spinning || spinsLeft <= 0;
+  const isIdle = !slot.winnerId && !slot.primed && !slot.spinning;
   const rows = slot.sequence.map((topic, index) => {
     const centerIndex = slot.winnerId ? 18 : 1;
     return {
@@ -1083,28 +1084,33 @@ function SlotMachine({
       </header>
 
       <section className="reel-window" aria-label="Topic reel">
-        <div className="payline" data-win={slot.winHighlight ? "true" : "false"}>
-          <span aria-hidden="true" />
-        </div>
-        <div
-          className="reel-list"
-          data-spinning={slot.spinning ? "true" : "false"}
-          key={slot.spinId}
-          style={
-            {
-              "--reel-offset": `${slot.reelOffset}px`,
-              "--final-offset": `${SLOT_FINAL_OFFSET}px`,
-            } as CSSProperties
-          }
-        >
-          {rows.map((row, index) => (
-            <SlotTopicRow key={`${slot.spinId}-${row.topic.id}-${index}`} row={row} />
-          ))}
-        </div>
-      </section>
-
-      <section className="slot-trigger-panel" aria-hidden="true">
-        <span />
+        {isIdle ? (
+          <p className="reel-idle">Pull for topic</p>
+        ) : (
+          <>
+            <div className="payline" data-win={slot.winHighlight ? "true" : "false"}>
+              <span aria-hidden="true" />
+            </div>
+            <div
+              className="reel-list"
+              data-spinning={slot.spinning ? "true" : "false"}
+              key={slot.spinId}
+              style={
+                {
+                  "--reel-offset": `${slot.reelOffset}px`,
+                  "--final-offset": `${SLOT_FINAL_OFFSET}px`,
+                } as CSSProperties
+              }
+            >
+              {rows.map((row, index) => (
+                <SlotTopicRow
+                  key={`${slot.spinId}-${row.topic.id}-${index}`}
+                  row={row}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="coin-tray" aria-label={`${spinsLeft} spins left`}>
