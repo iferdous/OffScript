@@ -325,6 +325,11 @@ button:disabled {
     0 0 0 3px rgba(201, 162, 75, 0.16);
 }
 
+.landing-filter-pill:focus-visible {
+  outline: 3px solid rgba(201, 162, 75, 0.34);
+  outline-offset: 3px;
+}
+
 .landing-filter-pill[aria-expanded="true"]::after {
   transform: translateY(-55%) rotate(180deg);
 }
@@ -339,7 +344,9 @@ button:disabled {
   display: grid;
   gap: 4px;
   left: 50%;
+  max-height: min(340px, calc(100vh - 140px));
   min-width: max(100%, 220px);
+  overflow-y: auto;
   padding: 10px;
   position: absolute;
   top: calc(100% + 10px);
@@ -387,10 +394,6 @@ button:disabled {
 .landing-copy .main-actions {
   justify-content: center;
   margin-top: 22px;
-}
-
-.landing-filters:has(.landing-filter-popover) + .main-actions {
-  margin-top: 228px;
 }
 
 .slot-preview {
