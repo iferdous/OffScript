@@ -294,7 +294,7 @@ function playCue(
   const now = context.currentTime;
   const master = context.createGain();
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(kind === "orbit" ? 0.08 : 0.12, now + 0.01);
+  master.gain.exponentialRampToValueAtTime(kind === "orbit" ? 0.035 : 0.055, now + 0.01);
   master.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "orbit" ? 0.8 : 0.4));
   master.connect(context.destination);
 
@@ -331,7 +331,7 @@ function playCue(
       now + hit.at + (kind === "tick" ? 0.04 : 0.16),
     );
     gain.gain.setValueAtTime(0.0001, now + hit.at);
-    gain.gain.exponentialRampToValueAtTime(kind === "tick" ? 0.32 : 0.9, now + hit.at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(kind === "tick" ? 0.12 : 0.36, now + hit.at + 0.006);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + hit.at + (kind === "tick" ? 0.055 : 0.19));
     oscillator.connect(gain);
     gain.connect(master);
@@ -360,8 +360,8 @@ function playSlotWhir(muted: boolean) {
   const now = context.currentTime;
   const master = context.createGain();
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.4, now + 0.04);
-  master.gain.setValueAtTime(0.4, now + 2.44);
+  master.gain.exponentialRampToValueAtTime(0.11, now + 0.04);
+  master.gain.setValueAtTime(0.11, now + 2.44);
   master.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
   master.connect(context.destination);
 
@@ -369,7 +369,7 @@ function playSlotWhir(muted: boolean) {
   const tick = context.createOscillator();
   const tickGain = context.createGain();
 
-  oscillator.type = "sawtooth";
+  oscillator.type = "triangle";
   oscillator.frequency.setValueAtTime(118, now);
   oscillator.frequency.exponentialRampToValueAtTime(72, now + 2.6);
   oscillator.connect(master);
@@ -379,7 +379,7 @@ function playSlotWhir(muted: boolean) {
   tick.type = "square";
   tick.frequency.setValueAtTime(26, now);
   tick.frequency.exponentialRampToValueAtTime(12, now + 2.6);
-  tickGain.gain.setValueAtTime(0.08, now);
+  tickGain.gain.setValueAtTime(0.025, now);
   tick.connect(tickGain);
   tickGain.connect(master);
   tick.start(now);
@@ -793,9 +793,19 @@ function RollScreen({
           </div>
         </div>
         <button className="slot-preview" type="button" onClick={onOpenSlot}>
-          <span>Offscript</span>
-          <strong>{activeTopic ? activeTopic.category : "Pull for topic"}</strong>
-          <small>{activeTopic ? activeTopic.prompt : "Three pulls per session"}</small>
+          <span className="preview-marquee">OFFSCRIPT</span>
+          <span className="preview-reel">
+            <span>{activeTopic ? activeTopic.category : "Pull for topic"}</span>
+            <small>
+              {activeTopic ? activeTopic.prompt : "Three pulls per session"}
+            </small>
+          </span>
+          <span className="preview-tray" aria-hidden="true">
+            {Array.from({ length: MAX_SPINS }, (_, index) => (
+              <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
+            ))}
+          </span>
+          <span className="preview-lever" aria-hidden="true" />
         </button>
       </section>
 
