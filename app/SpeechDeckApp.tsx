@@ -888,24 +888,14 @@ function RollScreen({
         <section
           className="slot-overlay"
           aria-label="Topic slot machine fullscreen"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              onCloseSlot();
-            }
-          }}
         >
           <button
-            className="corner-exit corner-exit-left"
+            className="slot-back-button"
             type="button"
             onClick={onCloseSlot}
-            aria-label="Close topic slot"
-          />
-          <button
-            className="corner-exit corner-exit-right"
-            type="button"
-            onClick={onCloseSlot}
-            aria-label="Close topic slot"
-          />
+          >
+            ← Back
+          </button>
           <button
             className="speaker-toggle overlay-speaker-toggle"
             type="button"

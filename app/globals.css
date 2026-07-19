@@ -106,22 +106,30 @@ button:disabled {
   z-index: 2;
 }
 
-.corner-exit {
-  background: rgba(245, 241, 232, 0.01);
-  border: 0;
-  height: min(25vw, 180px);
+.slot-back-button {
+  align-items: center;
+  background:
+    linear-gradient(145deg, rgba(245, 241, 232, 0.95), rgba(224, 218, 204, 0.92)) padding-box,
+    linear-gradient(135deg, #f0d98c 0%, #c9a24b 42%, #6f531f 100%) border-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 255, 255, 0.58),
+    inset -3px -3px 6px rgba(31, 61, 53, 0.1),
+    0 12px 22px rgba(0, 0, 0, 0.28);
+  color: var(--forest);
+  display: inline-flex;
+  font-family: Arial, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 950;
+  left: 28px;
+  letter-spacing: 0.08em;
+  min-height: 42px;
+  padding: 0 18px;
   position: fixed;
-  top: 0;
-  width: min(25vw, 180px);
-  z-index: 40;
-}
-
-.corner-exit-left {
-  left: 0;
-}
-
-.corner-exit-right {
-  right: 0;
+  text-transform: uppercase;
+  top: 28px;
+  z-index: 45;
 }
 
 .table-link {
