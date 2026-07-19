@@ -781,6 +781,56 @@ function RollScreen({
             the exact words you used, the fillers you leaned on, and the rhythm
             of your answer.
           </p>
+          <div className="landing-filters" aria-label="Topic setup filters">
+            <label className="landing-filter-pill">
+              <span aria-hidden="true">⏱</span>
+              <select
+                value={duration}
+                onChange={(event) => onDurationChange(Number(event.target.value))}
+                aria-label="Speaking time"
+              >
+                <option value={30}>0:30</option>
+                <option value={60}>1:00</option>
+                <option value={90}>1:30</option>
+                <option value={120}>2:00</option>
+                <option value={180}>3:00</option>
+              </select>
+            </label>
+            <label className="landing-filter-pill">
+              <span aria-hidden="true">●</span>
+              <select
+                value={difficultyFilter}
+                onChange={(event) =>
+                  onDifficultyFilterChange(event.target.value as DifficultyFilter)
+                }
+                aria-label="Topic difficulty"
+              >
+                <option value="Any">Any difficulty</option>
+                {SLOT_DIFFICULTIES.map((difficulty) => (
+                  <option key={difficulty} value={difficulty}>
+                    {difficulty}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="landing-filter-pill">
+              <span aria-hidden="true">◎</span>
+              <select
+                value={categoryFilter}
+                onChange={(event) =>
+                  onCategoryFilterChange(event.target.value as CategoryFilter)
+                }
+                aria-label="Topic category"
+              >
+                <option value="Any">Any category</option>
+                {SLOT_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {SLOT_CATEGORY_META[category].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <div className="main-actions">
             <button className="primary-pill" type="button" onClick={onOpenSlot}>
               Open topic slot
