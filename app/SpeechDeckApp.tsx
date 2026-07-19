@@ -810,7 +810,15 @@ function RollScreen({
       </section>
 
       {slotOpen ? (
-        <section className="slot-overlay" aria-label="Topic slot machine fullscreen">
+        <section
+          className="slot-overlay"
+          aria-label="Topic slot machine fullscreen"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              onCloseSlot();
+            }
+          }}
+        >
           <button
             className="corner-exit corner-exit-left"
             type="button"
