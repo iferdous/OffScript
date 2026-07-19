@@ -47,9 +47,9 @@ test("can create deterministic shuffled pools for server hydration", () => {
 test("avoids showing the last locked category first when alternatives exist", () => {
   const topics: SpeechTopic[] = [
     {
-      id: "music-a",
-      prompt: "Music first",
-      category: "Music",
+      id: "debate-a",
+      prompt: "Debate first",
+      category: "Debate",
       difficulty: "warm-up",
       trains: "test",
       why: "test",
@@ -58,9 +58,9 @@ test("avoids showing the last locked category first when alternatives exist", ()
       tags: [],
     },
     {
-      id: "music-b",
-      prompt: "Music second",
-      category: "Music",
+      id: "debate-b",
+      prompt: "Debate second",
+      category: "Debate",
       difficulty: "warm-up",
       trains: "test",
       why: "test",
@@ -69,9 +69,9 @@ test("avoids showing the last locked category first when alternatives exist", ()
       tags: [],
     },
     {
-      id: "work-a",
-      prompt: "Work first",
-      category: "Work",
+      id: "tech-a",
+      prompt: "Tech first",
+      category: "Tech",
       difficulty: "warm-up",
       trains: "test",
       why: "test",
@@ -83,7 +83,7 @@ test("avoids showing the last locked category first when alternatives exist", ()
 
   const lockedState = recordLockedTopic(
     {
-      poolIds: ["music-a", "work-a", "music-b"],
+      poolIds: ["debate-a", "tech-a", "debate-b"],
       spentIds: [],
       lastLockedCategory: null,
       reshuffleCount: 0,
@@ -92,7 +92,7 @@ test("avoids showing the last locked category first when alternatives exist", ()
   );
   const result = drawHand(lockedState, topics, { size: 2, random: () => 0 });
 
-  assert.equal(result.hand[0].category, "Work");
+  assert.equal(result.hand[0].category, "Tech");
 });
 
 test("reshuffles only after the full pool has been spent", () => {

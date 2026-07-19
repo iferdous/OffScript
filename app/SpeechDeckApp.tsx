@@ -50,13 +50,28 @@ declare global {
 type Screen = "roll" | "practice" | "review";
 type PracticeStatus = "idle" | "recording" | "paused" | "finished";
 
-type WheelState = {
-  ballRotation: number;
-  ballRadius: number;
-  rotation: number;
-  selectedCategory: TopicCategory | null;
+type SlotMachineState = {
+  primed: boolean;
+  reelOffset: number;
+  sequence: SpeechTopic[];
   spinning: boolean;
   spinId: number;
+  winnerId: string | null;
+  winHighlight: boolean;
+};
+
+type CategoryFilter = TopicCategory | "Any";
+type DifficultyFilter = SpeechTopic["difficulty"] | "Any";
+
+type SlotTopicRowData = {
+  topic: SpeechTopic;
+  dimmed: boolean;
+  winning: boolean;
+};
+
+type SlotCategoryMeta = {
+  label: string;
+  color: string;
 };
 
 type Analysis = {
@@ -70,32 +85,26 @@ type Analysis = {
 };
 
 const DEFAULT_SECONDS = 60;
-const MIN_SECONDS = 30;
-const MAX_SECONDS = 300;
-const MAX_SPINS = 5;
-const SPIN_DURATION_MS = 3600;
-const WHEEL_CATEGORIES: Array<{
-  category: TopicCategory;
-  label: string;
-}> = [
-  { category: "Culture", label: "Culture" },
-  { category: "Music", label: "Music" },
-  { category: "Identity", label: "Identity" },
-  { category: "Work", label: "Work" },
-  { category: "Opinion", label: "Opinion" },
-  { category: "Abstract", label: "Abstract" },
-  { category: "Story", label: "Story" },
-  { category: "Community", label: "Community" },
-];
-const WHEEL_POCKETS = [
-  WHEEL_CATEGORIES[0],
-  WHEEL_CATEGORIES[4],
-  WHEEL_CATEGORIES[1],
-  WHEEL_CATEGORIES[6],
-  WHEEL_CATEGORIES[3],
-  WHEEL_CATEGORIES[2],
-  WHEEL_CATEGORIES[5],
-  WHEEL_CATEGORIES[7],
+const MAX_SPINS = 3;
+const SLOT_ROW_HEIGHT = 56;
+const SLOT_FAST_DISTANCE = 18 * SLOT_ROW_HEIGHT;
+const SLOT_FINAL_OFFSET = SLOT_ROW_HEIGHT - SLOT_FAST_DISTANCE;
+const SLOT_SPIN_DURATION_MS = 3400;
+const SLOT_REEL_START_MS = 180;
+const SLOT_WIN_HIGHLIGHT_MS = 2900;
+const SLOT_CATEGORY_META: Record<TopicCategory, SlotCategoryMeta> = {
+  Tech: { label: "Tech", color: "#4A7FBF" },
+  Finance: { label: "Finance", color: "#4C9A6B" },
+  "Hot takes": { label: "Hot takes", color: "#C15B3E" },
+  Storytelling: { label: "Storytelling", color: "#B25680" },
+  Debate: { label: "Debate", color: "#B8863D" },
+  General: { label: "General", color: "#7B6FB0" },
+};
+const SLOT_CATEGORIES = Object.keys(SLOT_CATEGORY_META) as TopicCategory[];
+const SLOT_DIFFICULTIES: SpeechTopic["difficulty"][] = [
+  "warm-up",
+  "stretch",
+  "pressure",
 ];
 const FILLERS = [
   "um",
@@ -125,21 +134,6 @@ function buildInitialPool() {
   const random = createSeededRandom(20260718);
   const pool = createTopicPool(TOPICS, random);
   return { hand: [] as SpeechTopic[], state: pool };
-}
-
-function getCategoryIndex(category: TopicCategory) {
-  return Math.max(
-    0,
-    WHEEL_POCKETS.findIndex((item) => item.category === category),
-  );
-}
-
-function getTargetBallAngle(targetIndex: number) {
-  const sliceAngle = 360 / WHEEL_POCKETS.length;
-  const sliceCenter = targetIndex * sliceAngle + sliceAngle / 2;
-  const entryWobble = (Math.random() - 0.5) * (sliceAngle * 0.28);
-
-  return 360 * 6 + sliceCenter + entryWobble;
 }
 
 function countWords(text: string) {
@@ -348,15 +342,85 @@ function playCue(
   window.setTimeout(() => void context.close(), kind === "orbit" ? 900 : 500);
 }
 
-function scheduleRouletteTicks(muted: boolean) {
-  const tickTimes = [
-    90, 170, 250, 330, 410, 500, 600, 715, 845, 990, 1150, 1330, 1530, 1760,
-    2020, 2320, 2680, 3070, 3460, 3820, 4140,
-  ];
+function playSlotWhir(muted: boolean) {
+  if (typeof window === "undefined" || muted) {
+    return;
+  }
 
-  tickTimes.forEach((time) => {
-    window.setTimeout(() => playCue("tick", muted), time);
+  const AudioContext =
+    window.AudioContext ??
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+      .webkitAudioContext;
+
+  if (!AudioContext) {
+    return;
+  }
+
+  const context = new AudioContext();
+  const now = context.currentTime;
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.4, now + 0.04);
+  master.gain.setValueAtTime(0.4, now + 2.44);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+  master.connect(context.destination);
+
+  const oscillator = context.createOscillator();
+  const tick = context.createOscillator();
+  const tickGain = context.createGain();
+
+  oscillator.type = "sawtooth";
+  oscillator.frequency.setValueAtTime(118, now);
+  oscillator.frequency.exponentialRampToValueAtTime(72, now + 2.6);
+  oscillator.connect(master);
+  oscillator.start(now);
+  oscillator.stop(now + 2.6);
+
+  tick.type = "square";
+  tick.frequency.setValueAtTime(26, now);
+  tick.frequency.exponentialRampToValueAtTime(12, now + 2.6);
+  tickGain.gain.setValueAtTime(0.08, now);
+  tick.connect(tickGain);
+  tickGain.connect(master);
+  tick.start(now);
+  tick.stop(now + 2.6);
+
+  window.setTimeout(() => void context.close(), 2700);
+}
+
+function getEligibleTopics(
+  categoryFilter: CategoryFilter,
+  difficultyFilter: DifficultyFilter,
+) {
+  const eligibleTopics = TOPICS.filter((topic) => {
+    const categoryMatches =
+      categoryFilter === "Any" || topic.category === categoryFilter;
+    const difficultyMatches =
+      difficultyFilter === "Any" || topic.difficulty === difficultyFilter;
+    return categoryMatches && difficultyMatches;
   });
+
+  return eligibleTopics.length > 0 ? eligibleTopics : TOPICS;
+}
+
+function pickRandomTopic(topics: SpeechTopic[], exceptId?: string | null) {
+  const choices = topics.filter((topic) => topic.id !== exceptId);
+  const source = choices.length > 0 ? choices : topics;
+  return source[Math.floor(Math.random() * source.length)] ?? TOPICS[0];
+}
+
+function buildSlotSequence(
+  winner: SpeechTopic | null,
+  topics: SpeechTopic[] = TOPICS,
+) {
+  const winningTopic = winner ?? topics[0] ?? TOPICS[0];
+  const sequence = Array.from({ length: 18 }, (_, index) =>
+    index === 17 ? winningTopic : pickRandomTopic(topics, winningTopic.id),
+  );
+  const topBuffer = pickRandomTopic(topics, winningTopic.id);
+  const bottomBuffer = pickRandomTopic(topics, winningTopic.id);
+
+  return [topBuffer, ...sequence, bottomBuffer];
 }
 
 export function SpeechDeckApp() {
@@ -365,17 +429,20 @@ export function SpeechDeckApp() {
   const [pool, setPool] = useState<TopicPoolState>(initialDraw.state);
   const [activeTopic, setActiveTopic] = useState<SpeechTopic | null>(null);
   const [hasRolled, setHasRolled] = useState(false);
-  const [wheelOpen, setWheelOpen] = useState(false);
-  const [wheel, setWheel] = useState<WheelState>({
-    ballRotation: 0,
-    ballRadius: 0.265,
-    rotation: 0,
-    selectedCategory: null,
+  const [slotOpen, setSlotOpen] = useState(false);
+  const [slot, setSlot] = useState<SlotMachineState>({
+    primed: false,
+    reelOffset: 0,
+    sequence: buildSlotSequence(TOPICS[0] ?? null, TOPICS),
     spinning: false,
     spinId: 0,
+    winnerId: null,
+    winHighlight: false,
   });
   const [spinsLeft, setSpinsLeft] = useState(MAX_SPINS);
   const [muted, setMuted] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("Any");
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilter>("Any");
   const [duration, setDuration] = useState(DEFAULT_SECONDS);
   const [remaining, setRemaining] = useState(DEFAULT_SECONDS);
   const [status, setStatus] = useState<PracticeStatus>("idle");
@@ -423,48 +490,64 @@ export function SpeechDeckApp() {
     return () => window.clearInterval(timer);
   }, [status]);
 
-  function spinWheel() {
-    if (wheel.spinning || spinsLeft <= 0) {
+  function spinSlot() {
+    if (slot.primed || slot.spinning || spinsLeft <= 0) {
       return;
     }
 
     playCue("click", muted);
-    window.setTimeout(() => playCue("orbit", muted), 130);
-    scheduleRouletteTicks(muted);
-    const result = drawHand(pool, TOPICS, { size: 1 });
-    const chosenTopic = result.hand[0] ?? TOPICS[0];
-    const targetIndex = getCategoryIndex(chosenTopic.category);
-    const ballRotation = getTargetBallAngle(targetIndex);
+    playSlotWhir(muted);
+    const eligibleTopics = getEligibleTopics(categoryFilter, difficultyFilter);
+    const result = drawHand(pool, eligibleTopics, { size: 1 });
+    const chosenTopic = result.hand[0] ?? eligibleTopics[0] ?? TOPICS[0];
+    const nextSequence = buildSlotSequence(chosenTopic, eligibleTopics);
 
-    setWheel((current) => ({
+    setSlot((current) => ({
       ...current,
-      ballRotation,
-      ballRadius: 0.265,
-      selectedCategory: chosenTopic.category,
-      spinning: true,
+      primed: true,
+      reelOffset: SLOT_ROW_HEIGHT,
+      sequence: nextSequence,
+      winnerId: chosenTopic.id,
+      winHighlight: false,
       spinId: current.spinId + 1,
     }));
     setHasRolled(false);
     setSpinsLeft((current) => Math.max(0, current - 1));
 
     window.setTimeout(() => {
+      setSlot((current) => ({
+        ...current,
+        primed: false,
+        reelOffset: SLOT_FINAL_OFFSET,
+        spinning: true,
+      }));
+    }, SLOT_REEL_START_MS);
+
+    window.setTimeout(() => {
+      setSlot((current) => ({
+        ...current,
+        winHighlight: true,
+      }));
+      playCue("land", muted);
+    }, SLOT_WIN_HIGHLIGHT_MS);
+
+    window.setTimeout(() => {
       setPool(recordLockedTopic(result.state, chosenTopic));
       setActiveTopic(chosenTopic);
       setRemaining(duration);
-      setWheel((current) => ({
+      setSlot((current) => ({
         ...current,
-        ballRadius: 0.265,
-        ballRotation,
+        reelOffset: SLOT_FINAL_OFFSET,
         spinning: false,
+        winHighlight: false,
       }));
-      playCue("land", muted);
-      window.setTimeout(() => setHasRolled(true), 520);
-    }, SPIN_DURATION_MS);
+      setHasRolled(true);
+    }, SLOT_SPIN_DURATION_MS);
   }
 
   function startPractice() {
     if (!activeTopic) {
-      spinWheel();
+      spinSlot();
       return;
     }
 
@@ -580,21 +663,25 @@ export function SpeechDeckApp() {
       {screen === "roll" ? (
         <RollScreen
           activeTopic={activeTopic}
+          categoryFilter={categoryFilter}
+          difficultyFilter={difficultyFilter}
           duration={duration}
           hasRolled={hasRolled}
           muted={muted}
-          onCloseWheel={() => setWheelOpen(false)}
+          onCategoryFilterChange={setCategoryFilter}
+          onCloseSlot={() => setSlotOpen(false)}
+          onDifficultyFilterChange={setDifficultyFilter}
           onDurationChange={(nextDuration) => {
             setDuration(nextDuration);
             setRemaining(nextDuration);
           }}
-          onOpenWheel={() => setWheelOpen(true)}
-          onSpin={spinWheel}
+          onOpenSlot={() => setSlotOpen(true)}
+          onSpin={spinSlot}
           onStart={startPractice}
           onToggleMute={() => setMuted((current) => !current)}
+          slot={slot}
+          slotOpen={slotOpen}
           spinsLeft={spinsLeft}
-          wheel={wheel}
-          wheelOpen={wheelOpen}
         />
       ) : null}
 
@@ -644,36 +731,41 @@ export function SpeechDeckApp() {
 
 function RollScreen({
   activeTopic,
+  categoryFilter,
+  difficultyFilter,
   duration,
   hasRolled,
   muted,
-  onCloseWheel,
+  onCategoryFilterChange,
+  onCloseSlot,
+  onDifficultyFilterChange,
   onDurationChange,
-  onOpenWheel,
+  onOpenSlot,
   onSpin,
   onStart,
   onToggleMute,
+  slot,
+  slotOpen,
   spinsLeft,
-  wheel,
-  wheelOpen,
 }: {
   activeTopic: SpeechTopic | null;
+  categoryFilter: CategoryFilter;
+  difficultyFilter: DifficultyFilter;
   duration: number;
   hasRolled: boolean;
   muted: boolean;
-  onCloseWheel: () => void;
+  onCategoryFilterChange: (category: CategoryFilter) => void;
+  onCloseSlot: () => void;
+  onDifficultyFilterChange: (difficulty: DifficultyFilter) => void;
   onDurationChange: (duration: number) => void;
-  onOpenWheel: () => void;
+  onOpenSlot: () => void;
   onSpin: () => void;
   onStart: () => void;
   onToggleMute: () => void;
+  slot: SlotMachineState;
+  slotOpen: boolean;
   spinsLeft: number;
-  wheel: WheelState;
-  wheelOpen: boolean;
 }) {
-  const canDecreaseTime = duration > MIN_SECONDS;
-  const canIncreaseTime = duration < MAX_SECONDS;
-
   return (
     <section className="welcome-screen" aria-label="Offscript topic practice">
       <header className="top-bar">
@@ -685,13 +777,13 @@ function RollScreen({
           <p className="wordmark">Offscript</p>
           <h1>Walk in with foggy thoughts. Walk out clearer.</h1>
           <p>
-            Spin for an unrehearsed prompt, set a speaking window, then review
+            Pull for an unrehearsed prompt, set a speaking window, then review
             the exact words you used, the fillers you leaned on, and the rhythm
             of your answer.
           </p>
           <div className="main-actions">
-            <button className="primary-pill" type="button" onClick={onOpenWheel}>
-              Open topic wheel
+            <button className="primary-pill" type="button" onClick={onOpenSlot}>
+              Open topic slot
             </button>
             {activeTopic ? (
               <button className="secondary-pill" type="button" onClick={onStart}>
@@ -700,68 +792,86 @@ function RollScreen({
             ) : null}
           </div>
         </div>
-        <button className="wheel-preview" type="button" onClick={onOpenWheel}>
-          <span>Topic wheel</span>
+        <button className="slot-preview" type="button" onClick={onOpenSlot}>
+          <span>Topic machine</span>
           <strong>{activeTopic ? activeTopic.category : "Ready"}</strong>
           <small>{activeTopic ? activeTopic.prompt : "Click to enter the table"}</small>
         </button>
       </section>
 
-      {wheelOpen ? (
-        <section className="wheel-overlay" aria-label="Topic wheel fullscreen">
+      {slotOpen ? (
+        <section className="slot-overlay" aria-label="Topic slot machine fullscreen">
           <button
             className="corner-exit corner-exit-left"
             type="button"
-            onClick={onCloseWheel}
-            aria-label="Close topic wheel"
+            onClick={onCloseSlot}
+            aria-label="Close topic slot"
           />
           <button
             className="corner-exit corner-exit-right"
             type="button"
-            onClick={onCloseWheel}
-            aria-label="Close topic wheel"
+            onClick={onCloseSlot}
+            aria-label="Close topic slot"
           />
-          <header className="spin-chrome">
-            <span aria-hidden="true" />
-            <div className="time-stepper" aria-label="Speaking time">
-              <button
-                disabled={!canDecreaseTime}
-                type="button"
-                onClick={() => onDurationChange(Math.max(MIN_SECONDS, duration - 30))}
-                aria-label="Decrease time by 30 seconds"
-              >
-                −
-              </button>
-              <strong>{formatTime(duration)}</strong>
-              <button
-                disabled={!canIncreaseTime}
-                type="button"
-                onClick={() => onDurationChange(Math.min(MAX_SECONDS, duration + 30))}
-                aria-label="Increase time by 30 seconds"
-              >
-                +
-              </button>
-            </div>
-            <button className="table-link" type="button" onClick={onToggleMute}>
-              {muted ? "Sound off" : "Sound on"}
-            </button>
-          </header>
 
-          <RouletteWheel onSpin={onSpin} spinsLeft={spinsLeft} wheel={wheel} />
+          <SlotMachine
+            muted={muted}
+            onSpin={onSpin}
+            onToggleMute={onToggleMute}
+            slot={slot}
+            spinsLeft={spinsLeft}
+          />
 
-          <div className="spin-actions">
-            <button
-              className="primary-pill"
-              disabled={wheel.spinning || spinsLeft <= 0}
-              type="button"
-              onClick={onSpin}
-            >
-              {wheel.spinning ? "Ball in motion" : hasRolled ? "Spin again" : "Spin for topic"}
-            </button>
+          <div className="slot-controls" aria-label="Slot machine controls">
+            <label className="slot-pill-control">
+              Time
+              <select
+                value={duration}
+                onChange={(event) => onDurationChange(Number(event.target.value))}
+              >
+                <option value={30}>0:30</option>
+                <option value={60}>1:00</option>
+                <option value={90}>1:30</option>
+                <option value={120}>2:00</option>
+                <option value={180}>3:00</option>
+              </select>
+            </label>
+            <label className="slot-pill-control">
+              Difficulty
+              <select
+                value={difficultyFilter}
+                onChange={(event) =>
+                  onDifficultyFilterChange(event.target.value as DifficultyFilter)
+                }
+              >
+                <option value="Any">Any</option>
+                {SLOT_DIFFICULTIES.map((difficulty) => (
+                  <option key={difficulty} value={difficulty}>
+                    {difficulty}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="slot-pill-control">
+              Category
+              <select
+                value={categoryFilter}
+                onChange={(event) =>
+                  onCategoryFilterChange(event.target.value as CategoryFilter)
+                }
+              >
+                <option value="Any">Any</option>
+                {SLOT_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {SLOT_CATEGORY_META[category].label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
-          {hasRolled && activeTopic && !wheel.spinning ? (
-            <section className="topic-reveal" aria-live="polite">
+          {hasRolled && activeTopic && !slot.spinning ? (
+            <section className="slot-topic-reveal" aria-live="polite">
               <p>{activeTopic.category}</p>
               <h1>{activeTopic.prompt}</h1>
               <span>{activeTopic.trains}</span>
@@ -776,106 +886,102 @@ function RollScreen({
   );
 }
 
-function RouletteWheel({
+function SlotMachine({
+  muted,
   onSpin,
+  onToggleMute,
+  slot,
   spinsLeft,
-  wheel,
 }: {
+  muted: boolean;
   onSpin: () => void;
+  onToggleMute: () => void;
+  slot: SlotMachineState;
   spinsLeft: number;
-  wheel: WheelState;
 }) {
-  const sliceAngle = 360 / WHEEL_POCKETS.length;
-  const winningIndex = wheel.selectedCategory
-    ? getCategoryIndex(wheel.selectedCategory)
-    : -1;
+  const disabled = slot.primed || slot.spinning || spinsLeft <= 0;
+  const rows = slot.sequence.map((topic, index) => {
+    const centerIndex = slot.winnerId ? 18 : 1;
+    return {
+      topic,
+      dimmed: index !== centerIndex,
+      winning: slot.winHighlight && topic.id === slot.winnerId,
+    };
+  });
 
   return (
-    <section className="roulette-table" aria-label="Category roulette wheel">
-      <div className="roulette-pointer" aria-hidden="true">
-        <span />
-      </div>
-      <button
-        className="roulette-stage"
-        disabled={wheel.spinning || spinsLeft <= 0}
-        onClick={onSpin}
-        type="button"
-        aria-label="Spin topic wheel"
-      >
-        <span className="rim-studs bowl-markers" aria-hidden="true">
-          {Array.from({ length: 32 }, (_, index) => (
-            <span
-              key={index}
-              style={{ "--stud-angle": `${index * 11.25}deg` } as CSSProperties}
-            />
-          ))}
-        </span>
-        <span className="raised-frets" aria-hidden="true">
-          {WHEEL_POCKETS.map((_, index) => (
-            <span
-              key={index}
-              style={{ "--fret-angle": `${index * sliceAngle}deg` } as CSSProperties}
-            />
-          ))}
-        </span>
-        <span
-          className="roulette-wheel"
-          data-spinning={wheel.spinning ? "true" : "false"}
-          style={{ "--wheel-rotation": `${wheel.rotation}deg` } as CSSProperties}
+    <section className="slot-cabinet" aria-label="Slot machine topic reveal">
+      <div className="cabinet-trim" aria-hidden="true" />
+      <header className="slot-marquee">
+        <button
+          className="speaker-toggle"
+          type="button"
+          onClick={onToggleMute}
+          aria-label={muted ? "Turn sound on" : "Turn sound off"}
         >
-          {WHEEL_POCKETS.map((item, index) => {
-            const angle = index * sliceAngle + sliceAngle / 2;
-            const isWinner = !wheel.spinning && winningIndex === index;
-
-            return (
-              <span
-                className="wheel-label"
-                data-winner={isWinner ? "true" : "false"}
-                key={`${item.category}-${index}`}
-                style={
-                  {
-                    "--label-angle": `${angle}deg`,
-                    "--label-counter": `${-angle}deg`,
-                  } as CSSProperties
-                }
-              >
-                {item.label}
-              </span>
-            );
-          })}
-        </span>
-        <span className="spin-tokens" aria-label={`${spinsLeft} spins left`}>
+          {muted ? "×" : "♪"}
+        </button>
+        <strong>OFFSCRIPT</strong>
+        <span className="marquee-rivet marquee-rivet-left" aria-hidden="true" />
+        <span className="marquee-rivet marquee-rivet-right" aria-hidden="true" />
+        <span className="marquee-coins" aria-label={`${spinsLeft} spins left`}>
           {Array.from({ length: MAX_SPINS }, (_, index) => (
-            <span
-              data-filled={index < spinsLeft ? "true" : "false"}
-              key={index}
-              style={
-                {
-                  "--token-angle": `${124 + index * 28}deg`,
-                } as CSSProperties
-              }
-            />
+            <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
           ))}
         </span>
-        <span
-          className="roulette-ball"
-          data-spinning={wheel.spinning ? "true" : "false"}
+      </header>
+
+      <section className="reel-window" aria-label="Topic reel">
+        <div className="payline" data-win={slot.winHighlight ? "true" : "false"}>
+          <span aria-hidden="true" />
+        </div>
+        <div
+          className="reel-list"
+          data-spinning={slot.spinning ? "true" : "false"}
+          key={slot.spinId}
           style={
             {
-              "--ball-radius": wheel.ballRadius,
-              "--ball-rotation": `${wheel.ballRotation}deg`,
+              "--reel-offset": `${slot.reelOffset}px`,
+              "--final-offset": `${SLOT_FINAL_OFFSET}px`,
             } as CSSProperties
           }
-          aria-hidden="true"
-        />
-        <span className="roulette-hub">
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-        </span>
+        >
+          {rows.map((row, index) => (
+            <SlotTopicRow key={`${slot.spinId}-${row.topic.id}-${index}`} row={row} />
+          ))}
+        </div>
+      </section>
+
+      <button
+        className="slot-lever"
+        data-pulled={slot.primed ? "true" : "false"}
+        disabled={disabled}
+        onClick={onSpin}
+        type="button"
+        aria-label="Pull lever to reveal topic"
+      >
+        <span aria-hidden="true" />
       </button>
     </section>
+  );
+}
+
+function SlotTopicRow({ row }: { row: SlotTopicRowData }) {
+  const meta = SLOT_CATEGORY_META[row.topic.category];
+
+  return (
+    <div
+      className="slot-topic-row"
+      data-dimmed={row.dimmed ? "true" : "false"}
+      data-winning={row.winning ? "true" : "false"}
+    >
+      <span
+        className="slot-category-dot"
+        style={{ "--category-color": meta.color } as CSSProperties}
+        aria-hidden="true"
+      />
+      <span>{row.topic.prompt}</span>
+    </div>
   );
 }
 
@@ -1012,7 +1118,7 @@ function ReviewScreen({
             Try same topic
           </button>
           <button className="primary-pill" type="button" onClick={onNewSpin}>
-            Spin again
+            Pull again
           </button>
         </div>
       </header>
