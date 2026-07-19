@@ -34,8 +34,7 @@ body {
 }
 
 button,
-select,
-textarea {
+select {
   color: inherit;
   font: inherit;
 }
@@ -1437,14 +1436,21 @@ button:disabled {
   --angle: calc(var(--progress) * 360deg);
   align-items: center;
   background:
-    radial-gradient(circle, var(--cream) 63%, transparent 64%),
+    radial-gradient(circle, var(--cream) 61%, transparent 62%),
     conic-gradient(var(--lavender) var(--angle), rgba(31, 61, 53, 0.12) 0);
   border-radius: 50%;
   display: grid;
-  height: min(52vw, 420px);
+  height: min(50vw, 430px);
   margin: 26px 0 28px;
   place-items: center;
-  width: min(52vw, 420px);
+  width: min(50vw, 430px);
+}
+
+.timer-circle > div {
+  align-items: center;
+  display: grid;
+  gap: 24px;
+  justify-items: center;
 }
 
 .timer-circle[data-live="true"] {
@@ -1453,8 +1459,20 @@ button:disabled {
 
 .timer-circle strong {
   display: block;
-  font-size: clamp(4.2rem, 10vw, 6.9rem);
-  line-height: 1;
+  font-size: clamp(4rem, 8.6vw, 6.35rem);
+  line-height: 0.82;
+  min-width: 360px;
+  text-align: center;
+}
+
+.timer-circle .time-adjust {
+  gap: 18px;
+}
+
+.timer-circle .secondary-pill.small {
+  min-height: 48px;
+  min-width: 126px;
+  padding: 0 18px;
 }
 
 .round-control {
@@ -1478,9 +1496,9 @@ button:disabled {
 .transcript-panel {
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
   margin-top: 30px;
-  max-width: 980px;
+  max-width: 760px;
+  padding: 22px 26px;
   width: 100%;
 }
 
@@ -1495,16 +1513,6 @@ button:disabled {
   color: #8a3a2d;
   font-family: Arial, sans-serif;
   font-weight: 700;
-}
-
-textarea {
-  background: rgba(255, 250, 240, 0.68);
-  border: 1px solid var(--soft-line);
-  border-radius: 22px;
-  min-height: 150px;
-  outline-color: var(--lavender);
-  padding: 18px;
-  resize: vertical;
 }
 
 .review-screen {

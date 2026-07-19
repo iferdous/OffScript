@@ -449,9 +449,8 @@ export function SpeechDeckApp() {
   const [status, setStatus] = useState<PracticeStatus>("idle");
   const [finalTranscript, setFinalTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [manualTranscript, setManualTranscript] = useState("");
   const [speechError, setSpeechError] = useState("");
-  const rawTranscript = [finalTranscript, interimTranscript, manualTranscript]
+  const rawTranscript = [finalTranscript, interimTranscript]
     .filter(Boolean)
     .join(" ")
     .trim();
@@ -558,7 +557,6 @@ export function SpeechDeckApp() {
     setRemaining(duration);
     setFinalTranscript("");
     setInterimTranscript("");
-    setManualTranscript("");
     setSpeechError("");
 
     const recognition = getSpeechRecognition();
@@ -566,7 +564,7 @@ export function SpeechDeckApp() {
 
     if (!recognition) {
       setSpeechError(
-        "Live browser transcription is not available here. Type what you said in the notes box while the timer runs.",
+        "Live browser transcription is not available in this browser. Try allowing microphone access or use a browser with speech recognition.",
       );
       return;
     }
@@ -598,8 +596,8 @@ export function SpeechDeckApp() {
     recognition.onerror = (event) => {
       setSpeechError(
         event.error === "not-allowed"
-          ? "Microphone permission was blocked. You can still paste or type the transcript below."
-          : "Transcription paused. You can keep speaking or use the notes box.",
+          ? "Microphone permission was blocked. Allow mic access, then try the round again."
+          : "Transcription paused. You can keep speaking while the browser reconnects.",
       );
     };
     recognition.onend = () => {
@@ -615,13 +613,13 @@ export function SpeechDeckApp() {
     try {
       recognition.start();
     } catch {
-      setSpeechError("The microphone could not start. You can type the transcript below.");
+      setSpeechError("The microphone could not start. Check browser mic access and try again.");
     }
 
     window.setTimeout(() => {
       if (statusRef.current === "recording" && !transcriptRef.current) {
         setSpeechError(
-          "Still listening, but no words have come back yet. Keep speaking clearly or type the raw transcript below.",
+          "Still listening, but no words have come back yet. Keep speaking clearly and check that your microphone is active.",
         );
       }
     }, 6000);
@@ -637,7 +635,7 @@ export function SpeechDeckApp() {
     try {
       recognitionRef.current?.start();
     } catch {
-      setSpeechError("Transcription could not resume. Keep typing in the notes box.");
+      setSpeechError("Transcription could not resume. Check microphone access and try again.");
     }
   }
 
@@ -655,7 +653,6 @@ export function SpeechDeckApp() {
     setRemaining(duration);
     setFinalTranscript("");
     setInterimTranscript("");
-    setManualTranscript("");
     setSpeechError("");
   }
 
@@ -690,10 +687,8 @@ export function SpeechDeckApp() {
         <PracticeScreen
           activeTopic={activeTopic as SpeechTopic}
           duration={duration}
-          manualTranscript={manualTranscript}
           onBack={resetPractice}
           onFinish={finishPractice}
-          onManualTranscript={setManualTranscript}
           onPause={pausePractice}
           onResume={resumePractice}
           progress={progress}
@@ -721,7 +716,6 @@ export function SpeechDeckApp() {
             setRemaining(duration);
             setFinalTranscript("");
             setInterimTranscript("");
-            setManualTranscript("");
           }}
           rawTranscript={rawTranscript}
         />
@@ -1156,10 +1150,8 @@ function SlotTopicRow({ row }: { row: SlotTopicRowData }) {
 function PracticeScreen({
   activeTopic,
   duration,
-  manualTranscript,
   onBack,
   onFinish,
-  onManualTranscript,
   onPause,
   onResume,
   progress,
@@ -1171,10 +1163,8 @@ function PracticeScreen({
 }: {
   activeTopic: SpeechTopic;
   duration: number;
-  manualTranscript: string;
   onBack: () => void;
   onFinish: () => void;
-  onManualTranscript: (value: string) => void;
   onPause: () => void;
   onResume: () => void;
   progress: number;
@@ -1248,12 +1238,6 @@ function PracticeScreen({
           </p>
           {speechError ? <p className="speech-error">{speechError}</p> : null}
         </div>
-        <textarea
-          aria-label="Manual transcript fallback"
-          placeholder="If browser transcription is unavailable, type or paste what you said here."
-          value={manualTranscript}
-          onChange={(event) => onManualTranscript(event.target.value)}
-        />
       </section>
     </section>
   );
@@ -1317,7 +1301,7 @@ function ReviewScreen({
           <p className="panel-kicker">Cleaned version</p>
           <p>
             {analysis.cleanedTranscript ||
-              "Once you record or type a transcript, the cleaned version appears here."}
+              "Once you record a transcript, the cleaned version appears here."}
           </p>
         </article>
         <article className="review-block">
