@@ -684,22 +684,27 @@ button:disabled {
 .speaker-toggle {
   background:
     linear-gradient(145deg, #070605, #191510);
-  border: 1px solid rgba(201, 162, 75, 0.54);
+  border: 2px solid rgba(201, 162, 75, 0.64);
   border-radius: 50%;
   box-shadow:
     inset 2px 2px 4px rgba(0, 0, 0, 0.72),
-    inset -1px -1px 3px rgba(232, 201, 122, 0.18);
+    inset -1px -1px 3px rgba(232, 201, 122, 0.18),
+    0 10px 18px rgba(0, 0, 0, 0.32);
   color: #c9a24b;
   font-family: Arial, sans-serif;
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 900;
-  height: 24px;
-  left: 12px;
+  height: 48px;
   line-height: 1;
   padding: 0;
-  position: absolute;
-  top: 32px;
-  width: 24px;
+  width: 48px;
+}
+
+.overlay-speaker-toggle {
+  position: fixed;
+  right: 34px;
+  top: 28px;
+  z-index: 45;
 }
 
 .reel-window {

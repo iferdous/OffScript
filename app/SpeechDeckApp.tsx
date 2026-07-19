@@ -906,12 +906,18 @@ function RollScreen({
             onClick={onCloseSlot}
             aria-label="Close topic slot"
           />
+          <button
+            className="speaker-toggle overlay-speaker-toggle"
+            type="button"
+            onClick={onToggleMute}
+            aria-label={muted ? "Turn sound on" : "Turn sound off"}
+          >
+            {muted ? "×" : "♪"}
+          </button>
 
           <div className="slot-scroll-stage">
             <SlotMachine
-              muted={muted}
               onSpin={onSpin}
-              onToggleMute={onToggleMute}
               slot={slot}
               spinsLeft={spinsLeft}
             />
@@ -1041,15 +1047,11 @@ function LandingFilterMenu<TValue extends string | number>({
 }
 
 function SlotMachine({
-  muted,
   onSpin,
-  onToggleMute,
   slot,
   spinsLeft,
 }: {
-  muted: boolean;
   onSpin: () => void;
-  onToggleMute: () => void;
   slot: SlotMachineState;
   spinsLeft: number;
 }) {
@@ -1068,14 +1070,6 @@ function SlotMachine({
     <section className="slot-cabinet" aria-label="Slot machine topic reveal">
       <div className="cabinet-trim" aria-hidden="true" />
       <header className="slot-marquee">
-        <button
-          className="speaker-toggle"
-          type="button"
-          onClick={onToggleMute}
-          aria-label={muted ? "Turn sound on" : "Turn sound off"}
-        >
-          {muted ? "×" : "♪"}
-        </button>
         <strong>OFFSCRIPT</strong>
         <span className="marquee-rivet marquee-rivet-left" aria-hidden="true" />
         <span className="marquee-rivet marquee-rivet-right" aria-hidden="true" />
