@@ -218,10 +218,14 @@ button:disabled {
 
 .slot-preview {
   background:
-    linear-gradient(#1c1a17, #1c1a17) padding-box,
-    linear-gradient(135deg, #e8c97a, #8a6d2f) border-box;
+    linear-gradient(145deg, #28231d, #151310 70%) padding-box,
+    linear-gradient(135deg, #f0d98c 0%, #c9a24b 42%, #72561f 100%) border-box;
   border: 6px solid transparent;
   border-radius: 28px 28px 8px 8px;
+  box-shadow:
+    inset 5px 5px 10px rgba(240, 217, 140, 0.13),
+    inset -8px -10px 16px rgba(0, 0, 0, 0.56),
+    0 22px 42px rgba(0, 0, 0, 0.26);
   color: var(--paper);
   display: grid;
   justify-items: center;
@@ -235,9 +239,13 @@ button:disabled {
 }
 
 .slot-preview::before {
-  background: #0a0908;
+  background:
+    linear-gradient(145deg, rgba(0, 0, 0, 0.9), rgba(20, 18, 15, 0.98));
   border: 3px solid #8a6d2f;
   border-radius: 8px;
+  box-shadow:
+    inset 6px 6px 14px rgba(0, 0, 0, 0.78),
+    inset -2px -2px 8px rgba(232, 201, 122, 0.18);
   content: "";
   height: 138px;
   left: 50%;
@@ -259,7 +267,7 @@ button:disabled {
 
 .slot-preview strong {
   color: var(--paper);
-  font-size: clamp(2.2rem, 5vw, 4.5rem);
+  font-size: clamp(1.6rem, 3.6vw, 3.3rem);
   font-style: italic;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.46);
   z-index: 1;
@@ -281,17 +289,28 @@ button:disabled {
 }
 
 .slot-cabinet {
-  background: #1c1a17;
+  background:
+    linear-gradient(145deg, #28231d 0%, #1c1a17 42%, #11100e 100%);
   border-radius: 28px 28px 8px 8px;
-  height: 620px;
+  box-shadow:
+    inset 8px 8px 16px rgba(232, 201, 122, 0.1),
+    inset -14px -18px 22px rgba(0, 0, 0, 0.58),
+    18px 24px 42px rgba(0, 0, 0, 0.44);
+  height: 680px;
   position: relative;
   width: 440px;
   z-index: 2;
 }
 
 .cabinet-trim {
-  border: 6px solid #c9a24b;
+  border: 6px solid transparent;
   border-radius: 24px 24px 4px 4px;
+  background:
+    linear-gradient(#1c1a17, #1c1a17) padding-box,
+    linear-gradient(135deg, #f0d98c 0%, #c9a24b 38%, #6f531f 100%) border-box;
+  box-shadow:
+    inset 2px 2px 4px rgba(255, 238, 173, 0.22),
+    inset -4px -4px 7px rgba(0, 0, 0, 0.48);
   inset: 4px;
   pointer-events: none;
   position: absolute;
@@ -310,9 +329,14 @@ button:disabled {
 
 .slot-marquee {
   align-items: center;
-  background: #14120f;
+  background:
+    linear-gradient(145deg, #080706, #171411 70%);
   border: 2px solid #c9a24b;
   border-radius: 12px;
+  box-shadow:
+    inset 5px 5px 12px rgba(0, 0, 0, 0.78),
+    inset -2px -2px 7px rgba(232, 201, 122, 0.2),
+    0 2px 0 rgba(232, 201, 122, 0.12);
   display: grid;
   height: 64px;
   inset: 16px 16px auto;
@@ -329,8 +353,13 @@ button:disabled {
 }
 
 .marquee-rivet {
-  background: rgba(201, 162, 75, 0.6);
+  background:
+    radial-gradient(circle at 32% 28%, #f0d98c 0 18%, #c9a24b 20% 55%, #6f531f 100%);
+  border: 1px solid rgba(42, 29, 10, 0.68);
   border-radius: 50%;
+  box-shadow:
+    inset -1px -1px 2px rgba(0, 0, 0, 0.42),
+    1px 1px 2px rgba(0, 0, 0, 0.45);
   height: 6px;
   position: absolute;
   top: 12px;
@@ -345,9 +374,26 @@ button:disabled {
   right: 12px;
 }
 
+.marquee-rivet-bottom-left {
+  bottom: 12px;
+  left: 12px;
+  top: auto;
+}
+
+.marquee-rivet-bottom-right {
+  bottom: 12px;
+  right: 12px;
+  top: auto;
+}
+
 .speaker-toggle {
-  background: transparent;
-  border: 0;
+  background:
+    linear-gradient(145deg, #070605, #191510);
+  border: 1px solid rgba(201, 162, 75, 0.54);
+  border-radius: 50%;
+  box-shadow:
+    inset 2px 2px 4px rgba(0, 0, 0, 0.72),
+    inset -1px -1px 3px rgba(232, 201, 122, 0.18);
   color: #c9a24b;
   font-family: Arial, sans-serif;
   font-size: 16px;
@@ -361,33 +407,15 @@ button:disabled {
   width: 24px;
 }
 
-.marquee-coins {
-  bottom: 12px;
-  display: flex;
-  gap: 8px;
-  position: absolute;
-  right: 12px;
-}
-
-.marquee-coins span {
-  border: 2px solid #6b5a2f;
-  border-radius: 50%;
-  height: 14px;
-  width: 14px;
-}
-
-.marquee-coins span[data-filled="true"] {
-  background: #c9a24b;
-  border-color: #c9a24b;
-}
-
 .reel-window {
-  background: #0a0908;
+  background:
+    linear-gradient(145deg, #030303, #0d0b09);
   border: 3px solid #8a6d2f;
   border-radius: 8px;
   box-shadow:
-    inset 0 4px 12px rgba(0, 0, 0, 0.6),
-    inset 0 -4px 12px rgba(0, 0, 0, 0.6);
+    inset 8px 8px 16px rgba(0, 0, 0, 0.82),
+    inset -3px -3px 10px rgba(232, 201, 122, 0.16),
+    0 2px 0 rgba(232, 201, 122, 0.1);
   height: 168px;
   left: 50%;
   overflow: hidden;
@@ -399,8 +427,8 @@ button:disabled {
 
 .payline {
   background: rgba(201, 162, 75, 0.08);
-  border-bottom: 1px solid #c9a24b;
-  border-top: 1px solid #c9a24b;
+  border-bottom: 1px solid #4c3513;
+  border-top: 1px solid #e8c97a;
   height: 56px;
   left: 0;
   position: absolute;
@@ -418,6 +446,7 @@ button:disabled {
   border-left: 0;
   border-right: 8px solid #c9a24b;
   border-top: 6px solid transparent;
+  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.6));
   height: 0;
   left: -4px;
   position: absolute;
@@ -451,6 +480,12 @@ button:disabled {
   width: 360px;
 }
 
+.slot-topic-row + .slot-topic-row {
+  box-shadow:
+    inset 0 1px 0 rgba(240, 217, 140, 0.34),
+    inset 0 2px 0 rgba(0, 0, 0, 0.68);
+}
+
 .slot-topic-row[data-dimmed="true"] {
   color: #6b6456;
 }
@@ -458,6 +493,9 @@ button:disabled {
 .slot-category-dot {
   background: var(--category-color);
   border-radius: 50%;
+  box-shadow:
+    inset 1px 1px 1px rgba(255, 255, 255, 0.24),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.38);
   height: 8px;
   justify-self: start;
   margin-left: 16px;
@@ -475,9 +513,14 @@ button:disabled {
 }
 
 .slot-lever {
-  background: #8a6d2f;
+  background:
+    linear-gradient(90deg, #5e4418 0%, #e8c97a 38%, #8a6d2f 58%, #4c3513 100%);
   border: 0;
   border-radius: 6px;
+  box-shadow:
+    8px 10px 16px rgba(0, 0, 0, 0.42),
+    inset 2px 0 2px rgba(240, 217, 140, 0.36),
+    inset -2px 0 2px rgba(0, 0, 0, 0.4);
   height: 140px;
   padding: 0;
   position: absolute;
@@ -486,10 +529,52 @@ button:disabled {
   width: 12px;
 }
 
-.slot-lever span {
-  background: #c9a24b;
+.lever-mount {
+  background:
+    linear-gradient(135deg, #f0d98c 0%, #c9a24b 42%, #6f531f 100%);
+  border: 1px solid #4c3513;
+  border-radius: 8px;
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 238, 173, 0.32),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.5),
+    5px 6px 9px rgba(0, 0, 0, 0.36);
+  display: block;
+  height: 16px;
+  left: -12px;
+  position: absolute;
+  top: 104px;
+  width: 24px;
+}
+
+.lever-mount::before,
+.lever-mount::after {
+  background:
+    radial-gradient(circle at 34% 28%, #f0d98c 0 20%, #8a6d2f 65%, #3b290d 100%);
+  border-radius: 50%;
+  content: "";
+  height: 4px;
+  position: absolute;
+  top: 6px;
+  width: 4px;
+}
+
+.lever-mount::before {
+  left: 5px;
+}
+
+.lever-mount::after {
+  right: 5px;
+}
+
+.slot-lever > span:last-child {
+  background:
+    radial-gradient(circle at 32% 26%, #fff3b0 0 16%, #d8af4e 24% 58%, #7e5d22 100%);
   border: 4px solid #8a6d2f;
   border-radius: 50%;
+  box-shadow:
+    inset -4px -5px 7px rgba(0, 0, 0, 0.36),
+    inset 3px 3px 5px rgba(255, 238, 173, 0.34),
+    7px 9px 12px rgba(0, 0, 0, 0.42);
   display: block;
   height: 32px;
   left: 50%;
@@ -499,8 +584,108 @@ button:disabled {
   width: 32px;
 }
 
-.slot-lever[data-pulled="true"] span {
+.slot-lever[data-pulled="true"] > span:last-child {
   animation: lever-pull 480ms both;
+}
+
+.slot-trigger-panel {
+  background:
+    linear-gradient(145deg, #171410, #0d0c0a);
+  border: 2px solid #8a6d2f;
+  border-radius: 18px;
+  box-shadow:
+    inset 6px 6px 14px rgba(0, 0, 0, 0.72),
+    inset -3px -3px 8px rgba(232, 201, 122, 0.16);
+  height: 100px;
+  left: 40px;
+  position: absolute;
+  top: 284px;
+  width: 360px;
+}
+
+.slot-trigger-panel span {
+  background:
+    linear-gradient(135deg, #f0d98c 0%, #c9a24b 42%, #604615 100%);
+  border-radius: 999px;
+  box-shadow:
+    inset 2px 2px 3px rgba(255, 238, 173, 0.3),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.42);
+  display: block;
+  height: 14px;
+  margin: 42px auto 0;
+  width: 178px;
+}
+
+.coin-tray {
+  background:
+    linear-gradient(145deg, #11100e, #221d17);
+  border: 3px solid #7a5d25;
+  border-radius: 20px;
+  box-shadow:
+    inset 9px 9px 18px rgba(0, 0, 0, 0.74),
+    inset -4px -4px 10px rgba(232, 201, 122, 0.14);
+  color: rgba(240, 230, 210, 0.62);
+  display: grid;
+  gap: 16px;
+  height: 140px;
+  justify-items: center;
+  left: 40px;
+  padding-top: 24px;
+  position: absolute;
+  top: 408px;
+  width: 360px;
+}
+
+.coin-tray p {
+  font-family: Arial, sans-serif;
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.tray-coins {
+  display: flex;
+  gap: 18px;
+}
+
+.tray-coins span {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(240, 217, 140, 0.2) 0 16%, transparent 18%),
+    #15120e;
+  border: 2px solid #6b5a2f;
+  border-radius: 50%;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.66),
+    inset -1px -1px 3px rgba(232, 201, 122, 0.14);
+  height: 20px;
+  width: 20px;
+}
+
+.tray-coins span[data-filled="true"] {
+  background:
+    radial-gradient(circle at 32% 28%, #fff0a8 0 15%, #c9a24b 22% 58%, #6f531f 100%);
+  border-color: #8a6d2f;
+  box-shadow:
+    inset 2px 2px 4px rgba(255, 238, 173, 0.38),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.42),
+    2px 3px 5px rgba(0, 0, 0, 0.46);
+}
+
+.bottom-plinth {
+  background:
+    linear-gradient(135deg, #f0d98c 0%, #c9a24b 34%, #785817 100%);
+  border-radius: 4px 4px 10px 10px;
+  bottom: 0;
+  box-shadow:
+    inset 3px 3px 5px rgba(255, 238, 173, 0.34),
+    inset -5px -6px 10px rgba(0, 0, 0, 0.38),
+    0 12px 22px rgba(0, 0, 0, 0.34);
+  height: 40px;
+  left: -10px;
+  position: absolute;
+  width: 460px;
 }
 
 .slot-controls {
@@ -1194,14 +1379,21 @@ textarea {
 
   .slot-cabinet {
     justify-self: start;
-    margin-left: calc((100vw - 316.8px) / 2);
-    transform: scale(0.72);
+    margin-left: calc((100vw - 299.2px) / 2);
+    transform: scale(0.68);
     transform-origin: top left;
   }
 
   .slot-controls {
-    margin-top: -166px;
+    justify-self: center;
+    margin-top: -194px;
     max-width: calc(100vw - 32px);
+    transform: translateX(-64px);
+    width: calc(100vw - 32px);
+  }
+
+  .slot-pill-control {
+    max-width: 100%;
   }
 
   .slot-topic-reveal {
@@ -1229,6 +1421,7 @@ textarea {
 
   .slot-controls {
     margin-top: -228px;
+    transform: translateX(-70px);
   }
 }
 

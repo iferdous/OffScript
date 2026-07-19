@@ -793,9 +793,9 @@ function RollScreen({
           </div>
         </div>
         <button className="slot-preview" type="button" onClick={onOpenSlot}>
-          <span>Topic machine</span>
-          <strong>{activeTopic ? activeTopic.category : "Ready"}</strong>
-          <small>{activeTopic ? activeTopic.prompt : "Click to enter the table"}</small>
+          <span>Offscript</span>
+          <strong>{activeTopic ? activeTopic.category : "Pull for topic"}</strong>
+          <small>{activeTopic ? activeTopic.prompt : "Three pulls per session"}</small>
         </button>
       </section>
 
@@ -924,11 +924,8 @@ function SlotMachine({
         <strong>OFFSCRIPT</strong>
         <span className="marquee-rivet marquee-rivet-left" aria-hidden="true" />
         <span className="marquee-rivet marquee-rivet-right" aria-hidden="true" />
-        <span className="marquee-coins" aria-label={`${spinsLeft} spins left`}>
-          {Array.from({ length: MAX_SPINS }, (_, index) => (
-            <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
-          ))}
-        </span>
+        <span className="marquee-rivet marquee-rivet-bottom-left" aria-hidden="true" />
+        <span className="marquee-rivet marquee-rivet-bottom-right" aria-hidden="true" />
       </header>
 
       <section className="reel-window" aria-label="Topic reel">
@@ -952,6 +949,19 @@ function SlotMachine({
         </div>
       </section>
 
+      <section className="slot-trigger-panel" aria-hidden="true">
+        <span />
+      </section>
+
+      <section className="coin-tray" aria-label={`${spinsLeft} spins left`}>
+        <p>Spins</p>
+        <span className="tray-coins">
+          {Array.from({ length: MAX_SPINS }, (_, index) => (
+            <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
+          ))}
+        </span>
+      </section>
+
       <button
         className="slot-lever"
         data-pulled={slot.primed ? "true" : "false"}
@@ -960,8 +970,11 @@ function SlotMachine({
         type="button"
         aria-label="Pull lever to reveal topic"
       >
+        <span className="lever-mount" aria-hidden="true" />
         <span aria-hidden="true" />
       </button>
+
+      <div className="bottom-plinth" aria-hidden="true" />
     </section>
   );
 }
