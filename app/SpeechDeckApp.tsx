@@ -70,6 +70,8 @@ type Analysis = {
 };
 
 const DEFAULT_SECONDS = 60;
+const MIN_SECONDS = 30;
+const MAX_SECONDS = 300;
 const MAX_SPINS = 5;
 const SPIN_DURATION_MS = 3600;
 const WHEEL_CATEGORIES: Array<{
@@ -94,14 +96,6 @@ const WHEEL_POCKETS = [
   WHEEL_CATEGORIES[2],
   WHEEL_CATEGORIES[5],
   WHEEL_CATEGORIES[7],
-  WHEEL_CATEGORIES[6],
-  WHEEL_CATEGORIES[1],
-  WHEEL_CATEGORIES[7],
-  WHEEL_CATEGORIES[5],
-  WHEEL_CATEGORIES[0],
-  WHEEL_CATEGORIES[3],
-  WHEEL_CATEGORIES[4],
-  WHEEL_CATEGORIES[2],
 ];
 const FILLERS = [
   "um",
@@ -145,7 +139,7 @@ function getTargetBallAngle(targetIndex: number) {
   const sliceCenter = targetIndex * sliceAngle + sliceAngle / 2;
   const entryWobble = (Math.random() - 0.5) * (sliceAngle * 0.28);
 
-  return 360 * 7 + sliceCenter + entryWobble;
+  return 360 * 6 + sliceCenter + entryWobble;
 }
 
 function countWords(text: string) {
@@ -374,7 +368,7 @@ export function SpeechDeckApp() {
   const [wheelOpen, setWheelOpen] = useState(false);
   const [wheel, setWheel] = useState<WheelState>({
     ballRotation: 0,
-    ballRadius: 0.39,
+    ballRadius: 0.265,
     rotation: 0,
     selectedCategory: null,
     spinning: false,
@@ -677,6 +671,9 @@ function RollScreen({
   wheel: WheelState;
   wheelOpen: boolean;
 }) {
+  const canDecreaseTime = duration > MIN_SECONDS;
+  const canIncreaseTime = duration < MAX_SECONDS;
+
   return (
     <section className="welcome-screen" aria-label="Offscript topic practice">
       <header className="top-bar">
@@ -725,21 +722,26 @@ function RollScreen({
             aria-label="Close topic wheel"
           />
           <header className="spin-chrome">
-            <button className="table-link" type="button" onClick={onCloseWheel}>
-              Offscript
-            </button>
-            <label className="mini-pill table-setting">
-              Time
-              <select
-                value={duration}
-                onChange={(event) => onDurationChange(Number(event.target.value))}
+            <span aria-hidden="true" />
+            <div className="time-stepper" aria-label="Speaking time">
+              <button
+                disabled={!canDecreaseTime}
+                type="button"
+                onClick={() => onDurationChange(Math.max(MIN_SECONDS, duration - 30))}
+                aria-label="Decrease time by 30 seconds"
               >
-                <option value={30}>0:30</option>
-                <option value={60}>1:00</option>
-                <option value={90}>1:30</option>
-                <option value={120}>2:00</option>
-              </select>
-            </label>
+                −
+              </button>
+              <strong>{formatTime(duration)}</strong>
+              <button
+                disabled={!canIncreaseTime}
+                type="button"
+                onClick={() => onDurationChange(Math.min(MAX_SECONDS, duration + 30))}
+                aria-label="Increase time by 30 seconds"
+              >
+                +
+              </button>
+            </div>
             <button className="table-link" type="button" onClick={onToggleMute}>
               {muted ? "Sound off" : "Sound on"}
             </button>
@@ -833,6 +835,7 @@ function RouletteWheel({
                 style={
                   {
                     "--label-angle": `${angle}deg`,
+                    "--label-counter": `${-angle}deg`,
                   } as CSSProperties
                 }
               >
@@ -866,7 +869,10 @@ function RouletteWheel({
           aria-hidden="true"
         />
         <span className="roulette-hub">
-          <span>Offscript</span>
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
         </span>
       </button>
     </section>
