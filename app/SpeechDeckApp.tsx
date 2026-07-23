@@ -8,6 +8,12 @@ import {
   recordLockedTopic,
   type TopicPoolState,
 } from "./lib/topicEngine";
+import {
+  analyzeSpeech,
+  createEmptyVoiceMetrics,
+  type Analysis,
+  type VoiceMetricsInput,
+} from "./lib/speechAnalysis";
 
 type SpeechRecognitionResultLike = {
   isFinal: boolean;
@@ -75,14 +81,11 @@ type SlotCategoryMeta = {
   color: string;
 };
 
-type Analysis = {
-  cleanedTranscript: string;
-  fillerCounts: Array<{ word: string; count: number }>;
-  totalFillers: number;
-  wordCount: number;
-  wpm: number;
-  repeatedStarts: string[];
-  suggestions: string[];
+type VoiceCapture = {
+  audioContext: AudioContext;
+  intervalId: number;
+  source: MediaStreamAudioSourceNode;
+  stream: MediaStream;
 };
 
 const DEFAULT_SECONDS = 60;
@@ -107,21 +110,7 @@ const SLOT_DIFFICULTIES: SpeechTopic["difficulty"][] = [
   "stretch",
   "pressure",
 ];
-const FILLERS = [
-  "um",
-  "uh",
-  "like",
-  "you know",
-  "i mean",
-  "actually",
-  "basically",
-  "literally",
-  "sort of",
-  "kind of",
-  "kinda",
-  "so",
-  "right",
-];
+const VOICE_SAMPLE_MS = 120;
 
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)
@@ -137,13 +126,6 @@ function buildInitialPool() {
   return { hand: [] as SpeechTopic[], state: pool };
 }
 
-function countWords(text: string) {
-  return text
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
-}
-
 function getSpeechRecognition() {
   if (typeof window === "undefined") {
     return null;
@@ -153,125 +135,6 @@ function getSpeechRecognition() {
     window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 
   return Recognition ? new Recognition() : null;
-}
-
-function analyzeSpeech(rawTranscript: string, durationSeconds: number): Analysis {
-  const normalized = rawTranscript.toLowerCase();
-  const fillerCounts = FILLERS.map((word) => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const count = (normalized.match(new RegExp(`\\b${escaped}\\b`, "g")) ?? [])
-      .length;
-    return { word, count };
-  }).filter((item) => item.count > 0);
-  const totalFillers = fillerCounts.reduce((sum, item) => sum + item.count, 0);
-  const wordCount = countWords(rawTranscript);
-  const minutes = Math.max(durationSeconds / 60, 0.25);
-  const wpm = Math.round(wordCount / minutes);
-  const repeatedStarts = findRepeatedStarts(rawTranscript);
-  const cleanedTranscript = cleanTranscript(rawTranscript);
-  const suggestions = buildSuggestions({
-    fillerCounts,
-    repeatedStarts,
-    totalFillers,
-    wordCount,
-    wpm,
-  });
-
-  return {
-    cleanedTranscript,
-    fillerCounts,
-    totalFillers,
-    wordCount,
-    wpm,
-    repeatedStarts,
-    suggestions,
-  };
-}
-
-function cleanTranscript(rawTranscript: string) {
-  let cleaned = ` ${rawTranscript.trim()} `;
-
-  for (const filler of FILLERS) {
-    const escaped = filler.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    cleaned = cleaned.replace(new RegExp(`\\b${escaped}\\b[, ]*`, "gi"), "");
-  }
-
-  return cleaned
-    .replace(/\s+/g, " ")
-    .replace(/\s+([,.!?])/g, "$1")
-    .replace(/(^\w|[.!?]\s+\w)/g, (match) => match.toUpperCase())
-    .trim();
-}
-
-function findRepeatedStarts(rawTranscript: string) {
-  const words = rawTranscript
-    .toLowerCase()
-    .replace(/[^\w\s]/g, "")
-    .split(/\s+/)
-    .filter(Boolean);
-  const repeats = new Set<string>();
-
-  for (let index = 1; index < words.length; index += 1) {
-    if (words[index] === words[index - 1] && words[index].length > 2) {
-      repeats.add(words[index]);
-    }
-  }
-
-  return [...repeats].slice(0, 5);
-}
-
-function buildSuggestions({
-  fillerCounts,
-  repeatedStarts,
-  totalFillers,
-  wordCount,
-  wpm,
-}: Pick<
-  Analysis,
-  "fillerCounts" | "repeatedStarts" | "totalFillers" | "wordCount" | "wpm"
->) {
-  const suggestions: string[] = [];
-
-  if (wordCount < 12) {
-    suggestions.push(
-      "Say a little more next round. Aim for one claim, one example, and one closing sentence.",
-    );
-  }
-
-  if (totalFillers > 4) {
-    const topFiller = fillerCounts[0]?.word ?? "filler words";
-    suggestions.push(
-      `Your main filler was "${topFiller}". Try replacing that sound with a full silent pause.`,
-    );
-  }
-
-  if (wpm > 165) {
-    suggestions.push(
-      "Your pace was quick. Slow the first sentence down so listeners can catch the frame.",
-    );
-  } else if (wpm > 0 && wpm < 95) {
-    suggestions.push(
-      "Your pace was careful. Add a little more forward motion after each pause.",
-    );
-  } else if (wpm > 0) {
-    suggestions.push("Your pace is in a natural speaking range. Keep that rhythm.");
-  }
-
-  if (repeatedStarts.length > 0) {
-    suggestions.push(
-      `You repeated ${repeatedStarts
-        .map((word) => `"${word}"`)
-        .join(", ")}. Pause, then restart the sentence cleanly.`,
-    );
-  }
-
-  if (suggestions.length === 0) {
-    suggestions.push(
-      "Strong start. For the next rep, practice landing with one memorable final sentence.",
-    );
-  }
-
-  return suggestions.slice(0, 4);
 }
 
 function playCue(
@@ -450,18 +313,23 @@ export function SpeechDeckApp() {
   const [finalTranscript, setFinalTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [speechError, setSpeechError] = useState("");
+  const [voiceMetrics, setVoiceMetrics] = useState<VoiceMetricsInput>(
+    createEmptyVoiceMetrics,
+  );
   const rawTranscript = [finalTranscript, interimTranscript]
     .filter(Boolean)
     .join(" ")
     .trim();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceCaptureRef = useRef<VoiceCapture | null>(null);
+  const voiceMetricsRef = useRef<VoiceMetricsInput>(createEmptyVoiceMetrics());
   const statusRef = useRef(status);
   const remainingRef = useRef(remaining);
   const transcriptRef = useRef(rawTranscript);
   const progress = duration > 0 ? (duration - remaining) / duration : 0;
   const analysis = useMemo(
-    () => analyzeSpeech(rawTranscript, duration),
-    [duration, rawTranscript],
+    () => analyzeSpeech(rawTranscript, duration, voiceMetrics),
+    [duration, rawTranscript, voiceMetrics],
   );
 
   useEffect(() => {
@@ -489,6 +357,106 @@ export function SpeechDeckApp() {
 
     return () => window.clearInterval(timer);
   }, [status]);
+
+  useEffect(
+    () => () => {
+      stopVoiceCapture();
+      recognitionRef.current?.stop();
+    },
+    [],
+  );
+
+  function resetVoiceMetrics() {
+    const nextMetrics = createEmptyVoiceMetrics();
+    voiceMetricsRef.current = nextMetrics;
+    setVoiceMetrics(nextMetrics);
+  }
+
+  async function startVoiceCapture({ reset = false }: { reset?: boolean } = {}) {
+    if (reset) {
+      resetVoiceMetrics();
+    }
+
+    if (
+      typeof window === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia ||
+      voiceCaptureRef.current
+    ) {
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+      const AudioContext =
+        window.AudioContext ??
+        (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+
+      if (!AudioContext) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.82;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      let silentRunMs = 0;
+
+      const intervalId = window.setInterval(() => {
+        analyser.getByteTimeDomainData(data);
+        let sumSquares = 0;
+
+        for (const value of data) {
+          const centered = (value - 128) / 128;
+          sumSquares += centered * centered;
+        }
+
+        const rms = Math.sqrt(sumSquares / data.length);
+        const energy = Math.max(0, Math.min(1, (rms - 0.006) / 0.08));
+        const speaking = rms > 0.014;
+        const current = voiceMetricsRef.current;
+        const nextSilentRun = speaking ? 0 : silentRunMs + VOICE_SAMPLE_MS;
+        silentRunMs = nextSilentRun;
+        voiceMetricsRef.current = {
+          longestSilentRunMs: Math.max(current.longestSilentRunMs, nextSilentRun),
+          samples: [...current.samples, energy].slice(-900),
+          silentFrames: current.silentFrames + (speaking ? 0 : 1),
+          speechFrames: current.speechFrames + (speaking ? 1 : 0),
+          trackingAvailable: true,
+        };
+      }, VOICE_SAMPLE_MS);
+
+      voiceCaptureRef.current = { audioContext, intervalId, source, stream };
+    } catch {
+      const current = voiceMetricsRef.current;
+      voiceMetricsRef.current = { ...current, trackingAvailable: false };
+      setVoiceMetrics(voiceMetricsRef.current);
+    }
+  }
+
+  function stopVoiceCapture() {
+    const capture = voiceCaptureRef.current;
+
+    if (!capture) {
+      return;
+    }
+
+    window.clearInterval(capture.intervalId);
+    capture.source.disconnect();
+    capture.stream.getTracks().forEach((track) => track.stop());
+    void capture.audioContext.close();
+    voiceCaptureRef.current = null;
+    setVoiceMetrics({ ...voiceMetricsRef.current });
+  }
 
   function spinSlot() {
     if (slot.primed || slot.spinning || spinsLeft <= 0) {
@@ -558,6 +526,7 @@ export function SpeechDeckApp() {
     setFinalTranscript("");
     setInterimTranscript("");
     setSpeechError("");
+    void startVoiceCapture({ reset: true });
 
     const recognition = getSpeechRecognition();
     recognitionRef.current = recognition;
@@ -628,10 +597,12 @@ export function SpeechDeckApp() {
   function pausePractice() {
     setStatus("paused");
     recognitionRef.current?.stop();
+    stopVoiceCapture();
   }
 
   function resumePractice() {
     setStatus("recording");
+    void startVoiceCapture();
     try {
       recognitionRef.current?.start();
     } catch {
@@ -643,6 +614,7 @@ export function SpeechDeckApp() {
     playCue("finish", muted);
     setStatus("finished");
     recognitionRef.current?.stop();
+    stopVoiceCapture();
     setScreen("review");
   }
 
@@ -653,6 +625,7 @@ export function SpeechDeckApp() {
     setRemaining(duration);
     setFinalTranscript("");
     setInterimTranscript("");
+    resetVoiceMetrics();
     setSpeechError("");
   }
 
@@ -716,6 +689,7 @@ export function SpeechDeckApp() {
             setRemaining(duration);
             setFinalTranscript("");
             setInterimTranscript("");
+            resetVoiceMetrics();
           }}
           rawTranscript={rawTranscript}
         />
@@ -1283,12 +1257,24 @@ function ReviewScreen({
           <p>filler words</p>
         </div>
         <div>
+          <span>{analysis.fillerRate}%</span>
+          <p>filler load</p>
+        </div>
+        <div>
           <span>{analysis.wpm}</span>
           <p>words per minute</p>
         </div>
         <div>
           <span>{analysis.wordCount}</span>
           <p>total words in {formatTime(duration)}</p>
+        </div>
+        <div>
+          <span>{analysis.tone.averageEnergy || "—"}</span>
+          <p>{analysis.tone.label}</p>
+        </div>
+        <div>
+          <span>{analysis.vocabulary.uniqueWords}</span>
+          <p>{analysis.vocabulary.label} vocab</p>
         </div>
       </div>
 
@@ -1318,6 +1304,41 @@ function ReviewScreen({
           ) : (
             <p>No tracked filler words found.</p>
           )}
+        </article>
+        <article className="review-block">
+          <p className="panel-kicker">Tone and rhythm</p>
+          <p>{analysis.tone.summary}</p>
+          <ul className="metric-list">
+            <li>
+              <span>Voice energy</span>
+              <strong>{analysis.tone.averageEnergy || "—"}</strong>
+            </li>
+            <li>
+              <span>Energy contrast</span>
+              <strong>{analysis.tone.energyRange || "—"}</strong>
+            </li>
+            <li>
+              <span>Quiet space</span>
+              <strong>{analysis.tone.pauseRatio || "—"}%</strong>
+            </li>
+          </ul>
+        </article>
+        <article className="review-block">
+          <p className="panel-kicker">Structure</p>
+          <ul className="metric-list">
+            <li>
+              <span>Estimated sentence beats</span>
+              <strong>{analysis.structure.sentenceCount}</strong>
+            </li>
+            <li>
+              <span>Average beat length</span>
+              <strong>{analysis.structure.averageSentenceWords} words</strong>
+            </li>
+            <li>
+              <span>Long running beats</span>
+              <strong>{analysis.structure.longSentenceCount}</strong>
+            </li>
+          </ul>
         </article>
         <article className="review-block">
           <p className="panel-kicker">What to work on</p>

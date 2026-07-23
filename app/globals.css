@@ -1542,7 +1542,7 @@ button:disabled {
 .score-row {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 20px;
 }
 
@@ -1556,7 +1556,7 @@ button:disabled {
 .score-row span {
   color: var(--lavender);
   display: block;
-  font-size: clamp(2.8rem, 7vw, 5.4rem);
+  font-size: clamp(2.4rem, 5vw, 4.5rem);
   font-weight: 900;
   line-height: 1;
 }
@@ -1575,6 +1575,7 @@ button:disabled {
 }
 
 .filler-list,
+.metric-list,
 .suggestion-list {
   display: grid;
   gap: 10px;
@@ -1583,13 +1584,29 @@ button:disabled {
 }
 
 .filler-list li,
+.metric-list li,
 .suggestion-list li {
   background: rgba(184, 166, 232, 0.16);
   border-radius: 999px;
   display: flex;
+  gap: 16px;
   justify-content: space-between;
   list-style: none;
   padding: 10px 14px;
+}
+
+.metric-list li {
+  align-items: center;
+}
+
+.metric-list span {
+  color: var(--forest-soft);
+}
+
+.metric-list strong {
+  color: var(--forest);
+  font-family: Arial, sans-serif;
+  white-space: nowrap;
 }
 
 .suggestion-list li {
