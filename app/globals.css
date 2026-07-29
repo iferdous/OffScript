@@ -595,11 +595,13 @@ button:disabled {
 
 .slot-cabinet {
   background:
+    radial-gradient(circle at 48% 38%, rgba(232, 201, 122, 0.08), transparent 18rem),
     linear-gradient(145deg, #28231d 0%, #1c1a17 42%, #11100e 100%);
   border-radius: 28px 28px 8px 8px;
   box-shadow:
     inset 8px 8px 16px rgba(232, 201, 122, 0.1),
     inset -14px -18px 22px rgba(0, 0, 0, 0.58),
+    0 0 54px rgba(217, 163, 86, 0.16),
     18px 24px 42px rgba(0, 0, 0, 0.44);
   height: 440px;
   position: relative;
@@ -612,7 +614,15 @@ button:disabled {
   border-radius: 24px 24px 4px 4px;
   background:
     linear-gradient(#1c1a17, #1c1a17) padding-box,
-    linear-gradient(135deg, #f0d98c 0%, #c9a24b 38%, #6f531f 100%) border-box;
+    linear-gradient(
+        180deg,
+        rgba(255, 246, 185, 0.88) 0 9%,
+        transparent 10% 70%,
+        rgba(77, 51, 14, 0.72) 72% 100%
+      )
+      border-box,
+    linear-gradient(135deg, #f7df8f 0%, #c99a33 34%, #6b4a17 64%, #e4bd55 100%)
+      border-box;
   box-shadow:
     inset 2px 2px 4px rgba(255, 238, 173, 0.22),
     inset -4px -4px 7px rgba(0, 0, 0, 0.48);
@@ -622,8 +632,15 @@ button:disabled {
 }
 
 .cabinet-trim::before {
-  border-left: 1px solid #e8c97a;
-  border-top: 1px solid #e8c97a;
+  background:
+    linear-gradient(90deg, rgba(255, 248, 200, 0.34), transparent 8% 92%, rgba(71, 47, 14, 0.38)),
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      transparent 1px 5px
+    );
+  border-left: 1px solid rgba(232, 201, 122, 0.7);
+  border-top: 1px solid rgba(255, 246, 190, 0.76);
   border-radius: 22px 0 0 0;
   content: "";
   inset: 8px auto auto 8px;
@@ -635,13 +652,15 @@ button:disabled {
 .slot-marquee {
   align-items: center;
   background:
+    linear-gradient(180deg, rgba(255, 242, 170, 0.09), transparent 18%),
     linear-gradient(145deg, #080706, #171411 70%);
   border: 2px solid #c9a24b;
   border-radius: 12px;
   box-shadow:
     inset 5px 5px 12px rgba(0, 0, 0, 0.78),
     inset -2px -2px 7px rgba(232, 201, 122, 0.2),
-    0 2px 0 rgba(232, 201, 122, 0.12);
+    0 2px 0 rgba(255, 244, 186, 0.34),
+    0 12px 22px rgba(0, 0, 0, 0.3);
   display: grid;
   height: 64px;
   inset: 16px 16px auto;
@@ -719,13 +738,15 @@ button:disabled {
 
 .reel-window {
   background:
+    linear-gradient(180deg, rgba(255, 246, 190, 0.04), transparent 14%),
     linear-gradient(145deg, #030303, #0d0b09);
-  border: 3px solid #8a6d2f;
+  border: 3px solid #7a5d25;
   border-radius: 8px;
   box-shadow:
     inset 8px 8px 16px rgba(0, 0, 0, 0.82),
     inset -3px -3px 10px rgba(232, 201, 122, 0.16),
-    0 2px 0 rgba(232, 201, 122, 0.1);
+    0 1px 0 rgba(255, 246, 190, 0.22),
+    0 10px 18px rgba(0, 0, 0, 0.16);
   height: 168px;
   left: 50%;
   overflow: hidden;
@@ -750,7 +771,8 @@ button:disabled {
 }
 
 .payline {
-  background: rgba(201, 162, 75, 0.08);
+  background:
+    linear-gradient(90deg, rgba(240, 217, 140, 0.04), rgba(240, 217, 140, 0.16), rgba(240, 217, 140, 0.04));
   border-bottom: 1px solid #4c3513;
   border-top: 1px solid #e8c97a;
   height: 56px;
@@ -801,6 +823,7 @@ button:disabled {
   height: 56px;
   overflow: hidden;
   padding-right: 16px;
+  position: relative;
   width: 360px;
 }
 
@@ -811,7 +834,7 @@ button:disabled {
 }
 
 .slot-topic-row[data-dimmed="true"] {
-  color: #6b6456;
+  color: rgba(240, 230, 210, 0.34);
 }
 
 .slot-category-dot {
@@ -824,6 +847,22 @@ button:disabled {
   justify-self: start;
   margin-left: 16px;
   width: 8px;
+}
+
+.slot-topic-row[data-dimmed="true"] .slot-category-dot {
+  filter: grayscale(0.45);
+  opacity: 0.34;
+}
+
+.slot-topic-row[data-active="true"] {
+  background:
+    linear-gradient(90deg, rgba(240, 217, 140, 0.06), rgba(240, 217, 140, 0.2), rgba(240, 217, 140, 0.06));
+  box-shadow:
+    inset 4px 0 0 rgba(232, 201, 122, 0.78),
+    inset 0 1px 0 rgba(255, 246, 190, 0.24),
+    inset 0 -1px 0 rgba(83, 57, 19, 0.74),
+    0 0 18px rgba(217, 163, 86, 0.14);
+  color: #fff7e5;
 }
 
 .slot-topic-row span:last-child {
@@ -893,6 +932,7 @@ button:disabled {
 
 .slot-lever > span:last-child {
   background:
+    radial-gradient(circle at 26% 20%, #fffbe6 0 6%, rgba(255, 251, 230, 0.86) 7% 10%, transparent 12%),
     radial-gradient(circle at 32% 26%, #fff3b0 0 16%, #d8af4e 24% 58%, #7e5d22 100%);
   border: 4px solid #8a6d2f;
   border-radius: 50%;
@@ -914,16 +954,16 @@ button:disabled {
 }
 
 .lever-callout {
-  color: #f5f1e8;
+  color: #22180b;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-style: italic;
   font-weight: 900;
   letter-spacing: 0;
   position: absolute;
   right: -154px;
   text-align: center;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+  text-shadow: none;
   top: 30px;
   transform: rotate(-5deg);
   width: 144px;
@@ -931,11 +971,15 @@ button:disabled {
 }
 
 .lever-callout span {
-  background: rgba(245, 241, 232, 0.1);
-  border: 1px solid rgba(240, 217, 140, 0.42);
-  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 222, 0.9), rgba(213, 180, 115, 0.88));
+  border: 1px solid rgba(92, 65, 22, 0.42);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 8px 16px rgba(0, 0, 0, 0.28);
   display: inline-block;
-  padding: 4px 12px 5px;
+  padding: 5px 13px 6px;
 }
 
 .lever-callout svg {
@@ -959,12 +1003,13 @@ button:disabled {
 
 .coin-tray {
   background:
-    linear-gradient(145deg, #11100e, #221d17);
-  border: 3px solid #7a5d25;
+    linear-gradient(180deg, rgba(255, 246, 190, 0.025), transparent 18%),
+    linear-gradient(145deg, #090807, #17130f);
+  border: 2px solid #63491d;
   border-radius: 20px;
   box-shadow:
     inset 9px 9px 18px rgba(0, 0, 0, 0.74),
-    inset -4px -4px 10px rgba(232, 201, 122, 0.14);
+    inset -3px -3px 7px rgba(232, 201, 122, 0.09);
   color: rgba(240, 230, 210, 0.62);
   display: grid;
   gap: 14px;
@@ -973,7 +1018,7 @@ button:disabled {
   left: 40px;
   padding-top: 24px;
   position: absolute;
-  top: 272px;
+  top: 274px;
   width: 360px;
 }
 
@@ -993,15 +1038,17 @@ button:disabled {
 
 .tray-coins span {
   background:
-    radial-gradient(circle at 34% 28%, rgba(240, 217, 140, 0.2) 0 16%, transparent 18%),
-    #15120e;
-  border: 2px solid #6b5a2f;
+    radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.08) 0 38%, transparent 40%),
+    radial-gradient(circle at 34% 28%, rgba(240, 217, 140, 0.12) 0 16%, transparent 18%),
+    #100d0a;
+  border: 2px solid #4d3a18;
   border-radius: 50%;
   box-shadow:
-    inset 3px 3px 6px rgba(0, 0, 0, 0.66),
-    inset -1px -1px 3px rgba(232, 201, 122, 0.14);
-  height: 20px;
-  width: 20px;
+    inset 4px 5px 8px rgba(0, 0, 0, 0.78),
+    inset -1px -1px 3px rgba(232, 201, 122, 0.1),
+    0 1px 0 rgba(255, 246, 190, 0.08);
+  height: 22px;
+  width: 22px;
 }
 
 .tray-coins span[data-filled="true"] {
@@ -1016,6 +1063,12 @@ button:disabled {
 
 .bottom-plinth {
   background:
+    linear-gradient(180deg, rgba(255, 248, 199, 0.86) 0 12%, transparent 14% 72%, rgba(76, 48, 9, 0.58) 74% 100%),
+    repeating-linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      transparent 1px 5px
+    ),
     linear-gradient(135deg, #f0d98c 0%, #c9a24b 34%, #785817 100%);
   border-radius: 4px 4px 10px 10px;
   bottom: 0;
@@ -1033,22 +1086,23 @@ button:disabled {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 18px;
   justify-content: center;
+  margin-top: 20px;
   z-index: 2;
 }
 
 .slot-pill-control {
   align-items: center;
   background:
-    linear-gradient(145deg, rgba(8, 7, 6, 0.94), rgba(31, 27, 21, 0.96)) padding-box,
-    linear-gradient(135deg, #f0d98c 0%, #c9a24b 42%, #6f531f 100%) border-box;
+    linear-gradient(145deg, rgba(8, 7, 6, 0.78), rgba(31, 27, 21, 0.84)) padding-box,
+    linear-gradient(135deg, rgba(240, 217, 140, 0.84), rgba(111, 83, 31, 0.74)) border-box;
   border: 2px solid transparent;
   border-radius: 999px;
   box-shadow:
     inset 4px 4px 9px rgba(0, 0, 0, 0.62),
     inset -2px -2px 6px rgba(232, 201, 122, 0.14),
-    0 10px 18px rgba(0, 0, 0, 0.22);
+    0 6px 12px rgba(0, 0, 0, 0.16);
   color: rgba(240, 217, 140, 0.9);
   display: inline-flex;
   font-family: Arial, sans-serif;

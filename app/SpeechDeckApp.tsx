@@ -71,6 +71,7 @@ type DifficultyFilter = SpeechTopic["difficulty"] | "Any";
 type LandingFilterKey = "time" | "difficulty" | "category";
 
 type SlotTopicRowData = {
+  active: boolean;
   topic: SpeechTopic;
   dimmed: boolean;
   winning: boolean;
@@ -1105,9 +1106,11 @@ function SlotMachine({
   const isIdle = !slot.winnerId && !slot.primed && !slot.spinning;
   const rows = slot.sequence.map((topic, index) => {
     const centerIndex = slot.winnerId ? 18 : 1;
+    const active = index === centerIndex;
     return {
       topic,
-      dimmed: index !== centerIndex,
+      active,
+      dimmed: !active,
       winning: slot.winHighlight && topic.id === slot.winnerId,
     };
   });
@@ -1157,7 +1160,11 @@ function SlotMachine({
         <p>Spins</p>
         <span className="tray-coins">
           {Array.from({ length: MAX_SPINS }, (_, index) => (
-            <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
+            <span
+              aria-hidden="true"
+              data-filled={index < spinsLeft ? "true" : "false"}
+              key={index}
+            />
           ))}
         </span>
       </section>
@@ -1196,6 +1203,7 @@ function SlotTopicRow({ row }: { row: SlotTopicRowData }) {
   return (
     <div
       className="slot-topic-row"
+      data-active={row.active ? "true" : "false"}
       data-dimmed={row.dimmed ? "true" : "false"}
       data-winning={row.winning ? "true" : "false"}
     >
