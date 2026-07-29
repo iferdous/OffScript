@@ -1178,6 +1178,23 @@ button:disabled {
   margin: 0;
 }
 
+.wordmark-button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0;
+}
+
+.wordmark-button:hover,
+.wordmark-button:focus-visible {
+  color: var(--forest);
+  text-decoration: underline;
+  text-decoration-color: var(--gold);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 5px;
+}
+
 .top-bar .tiny-wordmark {
   position: absolute;
   right: 0;

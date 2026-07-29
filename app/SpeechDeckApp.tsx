@@ -1275,7 +1275,13 @@ function ReviewScreen({
     <section className="review-screen" aria-label="Speech feedback">
       <header className="review-header">
         <div>
-          <p className="tiny-wordmark">Offscript</p>
+          <button
+            className="tiny-wordmark wordmark-button"
+            type="button"
+            onClick={onNewSpin}
+          >
+            Offscript
+          </button>
           <h1>Here’s what your speech sounded like.</h1>
         </div>
         <div className="review-actions">
