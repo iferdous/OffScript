@@ -222,34 +222,83 @@ function playSlotWhir(muted: boolean) {
 
   const context = new AudioContext();
   const now = context.currentTime;
+  const duration = 2.7;
   const master = context.createGain();
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.11, now + 0.04);
-  master.gain.setValueAtTime(0.11, now + 2.44);
-  master.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
+  master.gain.exponentialRampToValueAtTime(0.075, now + 0.06);
+  master.gain.setValueAtTime(0.075, now + 1.85);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   master.connect(context.destination);
 
-  const oscillator = context.createOscillator();
-  const tick = context.createOscillator();
-  const tickGain = context.createGain();
+  const noiseBuffer = context.createBuffer(
+    1,
+    Math.floor(context.sampleRate * duration),
+    context.sampleRate,
+  );
+  const noise = noiseBuffer.getChannelData(0);
 
-  oscillator.type = "triangle";
-  oscillator.frequency.setValueAtTime(118, now);
-  oscillator.frequency.exponentialRampToValueAtTime(72, now + 2.6);
-  oscillator.connect(master);
-  oscillator.start(now);
-  oscillator.stop(now + 2.6);
+  for (let index = 0; index < noise.length; index += 1) {
+    noise[index] = (Math.random() * 2 - 1) * 0.8;
+  }
 
-  tick.type = "square";
-  tick.frequency.setValueAtTime(26, now);
-  tick.frequency.exponentialRampToValueAtTime(12, now + 2.6);
-  tickGain.gain.setValueAtTime(0.025, now);
-  tick.connect(tickGain);
-  tickGain.connect(master);
-  tick.start(now);
-  tick.stop(now + 2.6);
+  const wheelNoise = context.createBufferSource();
+  const bandpass = context.createBiquadFilter();
+  const lowpass = context.createBiquadFilter();
+  const noiseGain = context.createGain();
 
-  window.setTimeout(() => void context.close(), 2700);
+  wheelNoise.buffer = noiseBuffer;
+  bandpass.type = "bandpass";
+  bandpass.frequency.setValueAtTime(360, now);
+  bandpass.frequency.exponentialRampToValueAtTime(155, now + duration);
+  bandpass.Q.setValueAtTime(0.7, now);
+  lowpass.type = "lowpass";
+  lowpass.frequency.setValueAtTime(1600, now);
+  lowpass.frequency.exponentialRampToValueAtTime(620, now + duration);
+  noiseGain.gain.setValueAtTime(0.0001, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.28, now + 0.08);
+  noiseGain.gain.setValueAtTime(0.22, now + 1.7);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  wheelNoise.connect(bandpass);
+  bandpass.connect(lowpass);
+  lowpass.connect(noiseGain);
+  noiseGain.connect(master);
+  wheelNoise.start(now);
+  wheelNoise.stop(now + duration);
+
+  const motor = context.createOscillator();
+  const motorGain = context.createGain();
+  motor.type = "sawtooth";
+  motor.frequency.setValueAtTime(64, now);
+  motor.frequency.exponentialRampToValueAtTime(34, now + duration);
+  motorGain.gain.setValueAtTime(0.0001, now);
+  motorGain.gain.exponentialRampToValueAtTime(0.035, now + 0.08);
+  motorGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  motor.connect(motorGain);
+  motorGain.connect(master);
+  motor.start(now);
+  motor.stop(now + duration);
+
+  const tickTimes = [
+    0.08, 0.16, 0.25, 0.35, 0.46, 0.58, 0.72, 0.88, 1.06, 1.26, 1.49, 1.75,
+    2.04, 2.34,
+  ];
+
+  for (const at of tickTimes) {
+    const tick = context.createOscillator();
+    const tickGain = context.createGain();
+    tick.type = "triangle";
+    tick.frequency.setValueAtTime(760 - at * 150, now + at);
+    tick.frequency.exponentialRampToValueAtTime(180, now + at + 0.045);
+    tickGain.gain.setValueAtTime(0.0001, now + at);
+    tickGain.gain.exponentialRampToValueAtTime(0.16, now + at + 0.004);
+    tickGain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.055);
+    tick.connect(tickGain);
+    tickGain.connect(master);
+    tick.start(now + at);
+    tick.stop(now + at + 0.07);
+  }
+
+  window.setTimeout(() => void context.close(), 2900);
 }
 
 function getEligibleTopics(
