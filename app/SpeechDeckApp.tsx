@@ -323,6 +323,7 @@ export function SpeechDeckApp() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceCaptureRef = useRef<VoiceCapture | null>(null);
   const voiceMetricsRef = useRef<VoiceMetricsInput>(createEmptyVoiceMetrics());
+  const acceptingInputRef = useRef(false);
   const statusRef = useRef(status);
   const remainingRef = useRef(remaining);
   const transcriptRef = useRef(rawTranscript);
@@ -360,6 +361,7 @@ export function SpeechDeckApp() {
 
   useEffect(
     () => () => {
+      acceptingInputRef.current = false;
       stopVoiceCapture();
       recognitionRef.current?.stop();
     },
@@ -373,6 +375,8 @@ export function SpeechDeckApp() {
   }
 
   async function startVoiceCapture({ reset = false }: { reset?: boolean } = {}) {
+    acceptingInputRef.current = true;
+
     if (reset) {
       resetVoiceMetrics();
     }
@@ -392,6 +396,12 @@ export function SpeechDeckApp() {
           noiseSuppression: true,
         },
       });
+
+      if (!acceptingInputRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
       const AudioContext =
         window.AudioContext ??
         (window as typeof window & { webkitAudioContext?: typeof AudioContext })
@@ -412,6 +422,10 @@ export function SpeechDeckApp() {
       let silentRunMs = 0;
 
       const intervalId = window.setInterval(() => {
+        if (!acceptingInputRef.current) {
+          return;
+        }
+
         analyser.getByteTimeDomainData(data);
         let sumSquares = 0;
 
@@ -522,6 +536,7 @@ export function SpeechDeckApp() {
     playCue("start", muted);
     setScreen("practice");
     setStatus("recording");
+    acceptingInputRef.current = true;
     setRemaining(duration);
     setFinalTranscript("");
     setInterimTranscript("");
@@ -542,6 +557,10 @@ export function SpeechDeckApp() {
     recognition.interimResults = true;
     recognition.lang = "en-US";
     recognition.onresult = (event) => {
+      if (!acceptingInputRef.current || statusRef.current !== "recording") {
+        return;
+      }
+
       let finalText = "";
       let interimText = "";
 
@@ -557,12 +576,24 @@ export function SpeechDeckApp() {
       }
 
       if (finalText) {
-        setFinalTranscript((current) => `${current} ${finalText}`.trim());
+        setFinalTranscript((current) => {
+          if (!acceptingInputRef.current || statusRef.current !== "recording") {
+            return current;
+          }
+
+          return `${current} ${finalText}`.trim();
+        });
       }
 
-      setInterimTranscript(interimText);
+      if (acceptingInputRef.current && statusRef.current === "recording") {
+        setInterimTranscript(interimText);
+      }
     };
     recognition.onerror = (event) => {
+      if (!acceptingInputRef.current) {
+        return;
+      }
+
       setSpeechError(
         event.error === "not-allowed"
           ? "Microphone permission was blocked. Allow mic access, then try the round again."
@@ -570,7 +601,11 @@ export function SpeechDeckApp() {
       );
     };
     recognition.onend = () => {
-      if (statusRef.current === "recording" && remainingRef.current > 0) {
+      if (
+        acceptingInputRef.current &&
+        statusRef.current === "recording" &&
+        remainingRef.current > 0
+      ) {
         try {
           recognition.start();
         } catch {
@@ -596,12 +631,14 @@ export function SpeechDeckApp() {
 
   function pausePractice() {
     setStatus("paused");
+    acceptingInputRef.current = false;
     recognitionRef.current?.stop();
     stopVoiceCapture();
   }
 
   function resumePractice() {
     setStatus("recording");
+    acceptingInputRef.current = true;
     void startVoiceCapture();
     try {
       recognitionRef.current?.start();
@@ -612,6 +649,7 @@ export function SpeechDeckApp() {
 
   function finishPractice() {
     playCue("finish", muted);
+    acceptingInputRef.current = false;
     setStatus("finished");
     recognitionRef.current?.stop();
     stopVoiceCapture();
@@ -619,6 +657,7 @@ export function SpeechDeckApp() {
   }
 
   function resetPractice() {
+    acceptingInputRef.current = false;
     recognitionRef.current?.stop();
     setScreen("roll");
     setStatus("idle");
