@@ -1287,6 +1287,17 @@ function PracticeScreen({
   status: PracticeStatus;
 }) {
   const isRecording = status === "recording";
+  const allSpokenWords = rawTranscript
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+  const spokenWords = allSpokenWords
+    .map((word, index) => ({ id: `${index}-${word}`, word }))
+    .slice(-28);
+  const timerStyle = {
+    "--progress": progress,
+    "--remaining-progress": Math.max(0, 1 - progress),
+  } as CSSProperties;
 
   return (
     <section className="practice-screen" aria-label="Timed speaking practice">
@@ -1299,19 +1310,16 @@ function PracticeScreen({
 
       <div className="recording-console">
         <div className="practice-topic">
-          <p>Topic:</p>
           <h1>{activeTopic.prompt}</h1>
-          <span>{activeTopic.trains}</span>
         </div>
       </div>
 
       <div
         className="timer-circle"
         data-live={isRecording ? "true" : "false"}
-        style={{ "--progress": progress } as CSSProperties}
+        style={timerStyle}
       >
         <div>
-          <p className="recording-state">{isRecording ? "Mic live" : "Mic idle"}</p>
           <strong>{formatTime(remaining)}</strong>
           <div className="voice-meter" data-live={isRecording ? "true" : "false"} aria-hidden="true">
             {Array.from({ length: 11 }, (_, index) => (
@@ -1334,6 +1342,7 @@ function PracticeScreen({
               +0:30
             </button>
           </div>
+          <p className="recording-state">{isRecording ? "Mic live" : "Mic idle"}</p>
         </div>
       </div>
 
@@ -1352,20 +1361,23 @@ function PracticeScreen({
         </button>
       </div>
 
-      <section className="transcript-panel" aria-label="Live transcript">
-        <div>
-          <p className="panel-kicker">Raw transcript feed</p>
-          <p className="transcript-text">
-            {rawTranscript ||
-              "Start speaking. Your raw words, including filler words, will collect here as the browser returns text."}
-          </p>
-          {speechError ? <p className="speech-error">{speechError}</p> : null}
+      <section className="word-stream-panel" aria-label="Live word stream">
+        <div className="word-stream">
+          {spokenWords.length > 0 ? (
+            spokenWords.map(({ id, word }, index) => (
+              <span
+                className="spoken-word"
+                key={id}
+                style={{ "--word-index": index } as CSSProperties}
+              >
+                {word}
+              </span>
+            ))
+          ) : (
+            <p className="word-stream-empty">Your words will appear here as you speak.</p>
+          )}
         </div>
-        <div className="capture-rules" aria-hidden="true">
-          <span>Timer-bounded</span>
-          <span>Mic cuts off at zero</span>
-          <span>Review stays frozen</span>
-        </div>
+        {speechError ? <p className="speech-error">{speechError}</p> : null}
       </section>
     </section>
   );

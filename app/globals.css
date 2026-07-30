@@ -2226,18 +2226,32 @@ body {
 .recording-console {
   background: rgba(239, 247, 241, 0.05);
   border: 1px solid var(--lab-border);
-  border-radius: 28px;
+  border-radius: 999px;
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  margin: 48px auto 26px;
-  max-width: 920px;
-  padding: 22px 28px;
+  margin: 34px auto 22px;
+  max-width: 1040px;
+  padding: 18px 34px;
+  animation: topic-float-up 520ms cubic-bezier(0.16, 0.9, 0.2, 1) both;
 }
 
 .practice-topic h1,
 .review-header h1 {
   color: var(--lab-ink);
+}
+
+.practice-topic {
+  max-width: 980px;
+}
+
+.practice-topic h1 {
+  font-size: clamp(1.35rem, 2.35vw, 2.35rem);
+  line-height: 1.05;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .practice-topic p,
@@ -2248,7 +2262,8 @@ body {
 
 .timer-circle {
   background:
-    conic-gradient(var(--lavender) calc(var(--progress) * 1%), rgba(239, 247, 241, 0.1) 0),
+    radial-gradient(circle at 50% 48%, rgba(34, 42, 37, 0.98) 0 61%, transparent 62%),
+    conic-gradient(var(--lavender) calc(var(--remaining-progress) * 100%), rgba(239, 247, 241, 0.1) 0),
     radial-gradient(circle at 50% 48%, rgba(239, 247, 241, 0.05), rgba(239, 247, 241, 0.015) 62%);
   box-shadow:
     0 0 0 1px rgba(239, 247, 241, 0.1),
@@ -2264,7 +2279,7 @@ body {
   display: block;
   font-size: clamp(4.8rem, 10vw, 7.2rem);
   line-height: 0.82;
-  margin: 8px 0 20px;
+  margin: 0 0 22px;
 }
 
 .recording-state {
@@ -2273,7 +2288,7 @@ body {
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.18em;
-  margin: 0;
+  margin: 4px 0 0;
   text-transform: uppercase;
 }
 
@@ -2308,6 +2323,63 @@ body {
 
 .time-adjust {
   gap: 12px;
+}
+
+.word-stream-panel {
+  background: rgba(239, 247, 241, 0.035);
+  border: 1px solid var(--lab-border);
+  border-radius: 28px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 22px 60px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 12px;
+  margin-top: 26px;
+  max-width: 980px;
+  min-height: 118px;
+  padding: 22px 24px;
+  width: 100%;
+}
+
+.word-stream {
+  align-content: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 72px;
+}
+
+.spoken-word {
+  animation: word-pop 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--word-index) * 10ms);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+    rgba(120, 215, 161, 0.1);
+  border: 1px solid rgba(120, 215, 161, 0.2);
+  border-radius: 999px;
+  color: var(--lab-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  line-height: 1;
+  padding: 9px 13px 10px;
+}
+
+.spoken-word:nth-last-child(-n + 5) {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    rgba(169, 146, 255, 0.18);
+  border-color: rgba(169, 146, 255, 0.34);
+}
+
+.word-stream-empty {
+  align-self: center;
+  color: var(--lab-muted);
+  font-family: Arial, sans-serif;
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
 }
 
 .transcript-panel,
@@ -2394,6 +2466,32 @@ body {
   50% {
     height: 30px;
     opacity: 1;
+  }
+}
+
+@keyframes word-pop {
+  from {
+    filter: blur(6px);
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes topic-float-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
