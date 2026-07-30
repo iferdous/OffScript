@@ -1475,19 +1475,41 @@ button:disabled {
 
 .floating-analysis {
   align-items: center;
-  background: var(--forest);
-  border: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 42%),
+    var(--lab-green);
+  border: 1px solid rgba(239, 247, 241, 0.36);
   border-radius: 999px;
-  color: white;
+  color: #07100c;
   display: inline-flex;
   font-family: Arial, sans-serif;
+  font-size: 0.92rem;
   font-weight: 900;
-  min-height: 50px;
-  padding: 0 24px;
+  letter-spacing: 0.08em;
+  min-height: 56px;
+  padding: 0 30px;
   position: absolute;
-  right: 20%;
+  right: clamp(28px, 10vw, 180px);
+  box-shadow:
+    0 20px 44px rgba(120, 215, 161, 0.26),
+    0 0 0 5px rgba(120, 215, 161, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.46);
   text-transform: uppercase;
   top: 20px;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+  z-index: 4;
+}
+
+.floating-analysis:hover,
+.floating-analysis:focus-visible {
+  box-shadow:
+    0 24px 56px rgba(120, 215, 161, 0.34),
+    0 0 0 7px rgba(120, 215, 161, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  outline: 0;
+  transform: translateY(-2px);
 }
 
 .practice-topic {
@@ -2190,6 +2212,10 @@ body {
 .floating-analysis,
 .wordmark-button {
   color: var(--lab-ink);
+}
+
+.floating-analysis {
+  color: #07100c;
 }
 
 .floating-analysis.primary-pill,

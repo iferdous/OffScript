@@ -112,6 +112,7 @@ const SLOT_DIFFICULTIES: SpeechTopic["difficulty"][] = [
   "pressure",
 ];
 const VOICE_SAMPLE_MS = 120;
+const MIC_PERMISSION_STORAGE_KEY = "offscript-mic-permission-granted";
 
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60)
@@ -136,6 +137,22 @@ function getSpeechRecognition() {
     window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 
   return Recognition ? new Recognition() : null;
+}
+
+function rememberMicPermission() {
+  try {
+    window.localStorage.setItem(MIC_PERMISSION_STORAGE_KEY, "true");
+  } catch {
+    // Local storage can be unavailable in private/restricted sessions.
+  }
+}
+
+function forgetMicPermission() {
+  try {
+    window.localStorage.removeItem(MIC_PERMISSION_STORAGE_KEY);
+  } catch {
+    // Local storage can be unavailable in private/restricted sessions.
+  }
 }
 
 function playCue(
@@ -436,10 +453,22 @@ export function SpeechDeckApp() {
       !navigator.mediaDevices?.getUserMedia ||
       voiceCaptureRef.current
     ) {
-      return;
+      return true;
     }
 
     try {
+      if (navigator.permissions?.query) {
+        const permission = await navigator.permissions.query({
+          name: "microphone" as PermissionName,
+        });
+
+        if (permission.state === "denied") {
+          forgetMicPermission();
+          setSpeechError("Microphone permission is blocked for this site. Allow it in your browser settings, then try again.");
+          return false;
+        }
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -447,9 +476,11 @@ export function SpeechDeckApp() {
         },
       });
 
+      rememberMicPermission();
+
       if (!acceptingInputRef.current) {
         stream.getTracks().forEach((track) => track.stop());
-        return;
+        return false;
       }
 
       const AudioContext =
@@ -459,7 +490,7 @@ export function SpeechDeckApp() {
 
       if (!AudioContext) {
         stream.getTracks().forEach((track) => track.stop());
-        return;
+        return true;
       }
 
       const audioContext = new AudioContext();
@@ -500,10 +531,14 @@ export function SpeechDeckApp() {
       }, VOICE_SAMPLE_MS);
 
       voiceCaptureRef.current = { audioContext, intervalId, source, stream };
+      return true;
     } catch {
+      forgetMicPermission();
       const current = voiceMetricsRef.current;
       voiceMetricsRef.current = { ...current, trackingAvailable: false };
       setVoiceMetrics(voiceMetricsRef.current);
+      setSpeechError("Microphone access was not granted. Allow mic access once for this local site, then Offscript will reuse it.");
+      return false;
     }
   }
 
@@ -577,7 +612,7 @@ export function SpeechDeckApp() {
     }, SLOT_SPIN_DURATION_MS);
   }
 
-  function startPractice() {
+  async function startPractice() {
     if (!activeTopic) {
       spinSlot();
       return;
@@ -591,7 +626,7 @@ export function SpeechDeckApp() {
     setFinalTranscript("");
     setInterimTranscript("");
     setSpeechError("");
-    void startVoiceCapture({ reset: true });
+    const microphoneReady = await startVoiceCapture({ reset: true });
 
     const recognition = getSpeechRecognition();
     recognitionRef.current = recognition;
@@ -600,6 +635,10 @@ export function SpeechDeckApp() {
       setSpeechError(
         "Live browser transcription is not available in this browser. Try allowing microphone access or use a browser with speech recognition.",
       );
+      return;
+    }
+
+    if (!microphoneReady) {
       return;
     }
 
@@ -689,12 +728,17 @@ export function SpeechDeckApp() {
   function resumePractice() {
     setStatus("recording");
     acceptingInputRef.current = true;
-    void startVoiceCapture();
-    try {
-      recognitionRef.current?.start();
-    } catch {
-      setSpeechError("Transcription could not resume. Check microphone access and try again.");
-    }
+    void startVoiceCapture().then((microphoneReady) => {
+      if (!microphoneReady) {
+        return;
+      }
+
+      try {
+        recognitionRef.current?.start();
+      } catch {
+        setSpeechError("Transcription could not resume. Check microphone access and try again.");
+      }
+    });
   }
 
   function finishPractice() {
