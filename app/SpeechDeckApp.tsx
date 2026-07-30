@@ -849,28 +849,14 @@ function RollScreen({
 
   return (
     <section className="welcome-screen" aria-label="Offscript topic practice">
-      <header className="top-bar">
-        <nav className="mode-nav" aria-label="Practice modes">
-          <span className="mode-label">Random Topics</span>
-          <span className="mode-label mode-label-disabled">Interview Prep</span>
-          <span className="mode-label mode-label-disabled">Learn Vocab</span>
-        </nav>
-      </header>
-
       <section className="landing-grid">
         <div className="landing-copy">
-          <p className="landing-kicker">Live speaking lab</p>
           <p className="wordmark">Offscript</p>
           <h1>Train the moment before your mind goes blank.</h1>
           <p>
             Pull a prompt, speak inside the timer, then review the words,
             rhythm, and habits that actually came out.
           </p>
-          <div className="signal-strip" aria-label="Offscript practice loop">
-            <span>Prompt engine</span>
-            <span>Live transcript</span>
-            <span>Coach recap</span>
-          </div>
           <div className="landing-filters" aria-label="Topic setup filters">
             <LandingFilterMenu
               icon="⏱"
@@ -924,7 +910,7 @@ function RollScreen({
           </div>
           <div className="main-actions">
             <button className="primary-pill" type="button" onClick={onOpenSlot}>
-              Open prompt engine
+              Pull a topic
             </button>
             {activeTopic ? (
               <button className="secondary-pill" type="button" onClick={onStart}>
@@ -934,10 +920,6 @@ function RollScreen({
           </div>
         </div>
         <div className="topic-console">
-          <div className="console-header">
-            <span>Topic Engine</span>
-            <strong>{spinsLeft}/{MAX_SPINS} pulls</strong>
-          </div>
           <button className="slot-preview" type="button" onClick={onOpenSlot}>
             <span className="preview-marquee">OFFSCRIPT</span>
             <span className="preview-reel">
@@ -950,11 +932,6 @@ function RollScreen({
             </span>
             <span className="preview-lever" aria-hidden="true" />
           </button>
-          <div className="console-footer" aria-hidden="true">
-            <span>no script</span>
-            <span>raw words</span>
-            <span>frozen stats</span>
-          </div>
         </div>
       </section>
 
