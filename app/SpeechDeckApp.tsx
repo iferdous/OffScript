@@ -859,12 +859,18 @@ function RollScreen({
 
       <section className="landing-grid">
         <div className="landing-copy">
+          <p className="landing-kicker">Live speaking lab</p>
           <p className="wordmark">Offscript</p>
-          <h1>Walk in with foggy thoughts. Walk out clearer.</h1>
+          <h1>Train the moment before your mind goes blank.</h1>
           <p>
-            Pull the lever for an unrehearsed topic. Set your speaking window,
-            then talk it out: no notes, no script, no do-overs.
+            Pull a prompt, speak inside the timer, then review the words,
+            rhythm, and habits that actually came out.
           </p>
+          <div className="signal-strip" aria-label="Offscript practice loop">
+            <span>Prompt engine</span>
+            <span>Live transcript</span>
+            <span>Coach recap</span>
+          </div>
           <div className="landing-filters" aria-label="Topic setup filters">
             <LandingFilterMenu
               icon="⏱"
@@ -918,27 +924,38 @@ function RollScreen({
           </div>
           <div className="main-actions">
             <button className="primary-pill" type="button" onClick={onOpenSlot}>
-              Pull a topic
+              Open prompt engine
             </button>
             {activeTopic ? (
               <button className="secondary-pill" type="button" onClick={onStart}>
-                Start timer →
+                Start recording →
               </button>
             ) : null}
           </div>
         </div>
-        <button className="slot-preview" type="button" onClick={onOpenSlot}>
-          <span className="preview-marquee">OFFSCRIPT</span>
-          <span className="preview-reel">
-            <span>{activeTopic ? activeTopic.prompt : "Pull for topic"}</span>
-          </span>
-          <span className="preview-tray" aria-hidden="true">
-            {Array.from({ length: MAX_SPINS }, (_, index) => (
-              <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
-            ))}
-          </span>
-          <span className="preview-lever" aria-hidden="true" />
-        </button>
+        <div className="topic-console">
+          <div className="console-header">
+            <span>Topic Engine</span>
+            <strong>{spinsLeft}/{MAX_SPINS} pulls</strong>
+          </div>
+          <button className="slot-preview" type="button" onClick={onOpenSlot}>
+            <span className="preview-marquee">OFFSCRIPT</span>
+            <span className="preview-reel">
+              <span>{activeTopic ? activeTopic.prompt : "Pull for topic"}</span>
+            </span>
+            <span className="preview-tray" aria-hidden="true">
+              {Array.from({ length: MAX_SPINS }, (_, index) => (
+                <span data-filled={index < spinsLeft ? "true" : "false"} key={index} />
+              ))}
+            </span>
+            <span className="preview-lever" aria-hidden="true" />
+          </button>
+          <div className="console-footer" aria-hidden="true">
+            <span>no script</span>
+            <span>raw words</span>
+            <span>frozen stats</span>
+          </div>
+        </div>
       </section>
 
       {slotOpen ? (
@@ -963,6 +980,10 @@ function RollScreen({
           </button>
 
           <div className="slot-scroll-stage">
+            <div className="slot-stage-copy">
+              <p>Prompt engine armed</p>
+              <h2>Pull once. Commit fast. Speak clean.</h2>
+            </div>
             <SlotMachine
               onSpin={onSpin}
               slot={slot}
@@ -1023,7 +1044,7 @@ function RollScreen({
                 <h1>{activeTopic.prompt}</h1>
                 <span>{activeTopic.trains}</span>
                 <button className="primary-pill" type="button" onClick={onStart}>
-                  Start timer →
+                  Start recording →
                 </button>
               </section>
             ) : null}
@@ -1244,6 +1265,8 @@ function PracticeScreen({
   speechError: string;
   status: PracticeStatus;
 }) {
+  const isRecording = status === "recording";
+
   return (
     <section className="practice-screen" aria-label="Timed speaking practice">
       <button className="back-link" type="button" onClick={onBack}>
@@ -1253,18 +1276,27 @@ function PracticeScreen({
         Analyze
       </button>
 
-      <div className="practice-topic">
-        <p>Topic:</p>
-        <h1>{activeTopic.prompt}</h1>
+      <div className="recording-console">
+        <div className="practice-topic">
+          <p>Topic:</p>
+          <h1>{activeTopic.prompt}</h1>
+          <span>{activeTopic.trains}</span>
+        </div>
       </div>
 
       <div
         className="timer-circle"
-        data-live={status === "recording" ? "true" : "false"}
+        data-live={isRecording ? "true" : "false"}
         style={{ "--progress": progress } as CSSProperties}
       >
         <div>
+          <p className="recording-state">{isRecording ? "Mic live" : "Mic idle"}</p>
           <strong>{formatTime(remaining)}</strong>
+          <div className="voice-meter" data-live={isRecording ? "true" : "false"} aria-hidden="true">
+            {Array.from({ length: 11 }, (_, index) => (
+              <span key={index} />
+            ))}
+          </div>
           <div className="time-adjust">
             <button
               className="secondary-pill small"
@@ -1301,12 +1333,17 @@ function PracticeScreen({
 
       <section className="transcript-panel" aria-label="Live transcript">
         <div>
-          <p className="panel-kicker">Live transcript</p>
+          <p className="panel-kicker">Raw transcript feed</p>
           <p className="transcript-text">
             {rawTranscript ||
               "Start speaking. Your raw words, including filler words, will collect here as the browser returns text."}
           </p>
           {speechError ? <p className="speech-error">{speechError}</p> : null}
+        </div>
+        <div className="capture-rules" aria-hidden="true">
+          <span>Timer-bounded</span>
+          <span>Mic cuts off at zero</span>
+          <span>Review stays frozen</span>
         </div>
       </section>
     </section>
@@ -1339,14 +1376,15 @@ function ReviewScreen({
           >
             Offscript
           </button>
-          <h1>Here’s what your speech sounded like.</h1>
+          <h1>Your speaking snapshot is locked.</h1>
+          <p>Raw words, rhythm, filler habits, and next-rep coaching from the timer window.</p>
         </div>
         <div className="review-actions">
-          <button className="secondary-pill" type="button" onClick={onRetry}>
-            Try same topic
+          <button className="primary-pill" type="button" onClick={onRetry}>
+            Practice again
           </button>
-          <button className="primary-pill" type="button" onClick={onNewSpin}>
-            Pull again
+          <button className="secondary-pill" type="button" onClick={onNewSpin}>
+            New prompt
           </button>
         </div>
       </header>
