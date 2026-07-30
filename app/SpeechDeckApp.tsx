@@ -1291,9 +1291,11 @@ function PracticeScreen({
     .split(/\s+/)
     .map((word) => word.trim())
     .filter(Boolean);
+  const currentLineStart =
+    allSpokenWords.length > 0 ? Math.floor((allSpokenWords.length - 1) / 10) * 10 : 0;
   const spokenWords = allSpokenWords
     .map((word, index) => ({ id: `${index}-${word}`, word }))
-    .slice(-28);
+    .slice(currentLineStart, currentLineStart + 10);
   const timerStyle = {
     "--progress": progress,
     "--remaining-progress": Math.max(0, 1 - progress),

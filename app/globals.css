@@ -2261,17 +2261,33 @@ body {
 }
 
 .timer-circle {
-  background:
-    radial-gradient(circle at 50% 48%, rgba(34, 42, 37, 0.98) 0 61%, transparent 62%),
-    conic-gradient(var(--lavender) calc(var(--remaining-progress) * 100%), rgba(239, 247, 241, 0.1) 0),
-    radial-gradient(circle at 50% 48%, rgba(239, 247, 241, 0.05), rgba(239, 247, 241, 0.015) 62%);
+  background: #222a25;
   box-shadow:
     0 0 0 1px rgba(239, 247, 241, 0.1),
     0 34px 90px rgba(0, 0, 0, 0.34);
+  overflow: hidden;
+  position: relative;
 }
 
 .timer-circle::before {
-  background: var(--lab-bg);
+  background:
+    conic-gradient(
+      from -90deg,
+      var(--lavender) calc(var(--remaining-progress) * 1turn),
+      rgba(239, 247, 241, 0.1) 0
+    );
+  border-radius: inherit;
+  content: "";
+  inset: 0;
+  mask: radial-gradient(circle, transparent 0 60%, #000 60.7%);
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.timer-circle > div {
+  position: relative;
+  z-index: 1;
 }
 
 .timer-circle strong {
@@ -2336,17 +2352,20 @@ body {
   gap: 12px;
   margin-top: 26px;
   max-width: 980px;
-  min-height: 118px;
-  padding: 22px 24px;
+  min-height: 92px;
+  overflow: hidden;
+  padding: 20px 24px;
   width: 100%;
 }
 
 .word-stream {
-  align-content: center;
+  align-items: center;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
-  min-height: 72px;
+  min-height: 50px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .spoken-word {
@@ -2358,6 +2377,7 @@ body {
   border: 1px solid rgba(120, 215, 161, 0.2);
   border-radius: 999px;
   color: var(--lab-ink);
+  flex: 0 0 auto;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1rem, 1.35vw, 1.25rem);
   line-height: 1;
