@@ -82,6 +82,15 @@ type SlotCategoryMeta = {
   color: string;
 };
 
+type ReviewIconType =
+  | "clock"
+  | "filler"
+  | "grid"
+  | "pace"
+  | "pause"
+  | "spark"
+  | "words";
+
 type VoiceCapture = {
   audioContext: AudioContext;
   intervalId: number;
@@ -1258,6 +1267,152 @@ function SlotTopicRow({ row }: { row: SlotTopicRowData }) {
   );
 }
 
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getReviewScore(analysis: Analysis) {
+  if (analysis.wordCount === 0) {
+    return 0;
+  }
+
+  const paceScore =
+    analysis.wpm >= 105 && analysis.wpm <= 160
+      ? 22
+      : Math.max(4, 22 - Math.abs(132 - analysis.wpm) * 0.18);
+  const fillerScore = Math.max(0, 24 - analysis.fillerRate * 2.2);
+  const structureScore = Math.max(
+    4,
+    18 - analysis.structure.longSentenceCount * 5 - Math.max(0, analysis.structure.averageSentenceWords - 24) * 0.4,
+  );
+  const vocabScore = Math.min(16, analysis.vocabulary.uniqueWords * 0.7);
+  const toneScore =
+    analysis.tone.label === "engaged"
+      ? 20
+      : analysis.tone.label === "tone unavailable"
+        ? 12
+        : 10;
+
+  return clampScore(paceScore + fillerScore + structureScore + vocabScore + toneScore);
+}
+
+function ReviewIcon({ type }: { type: ReviewIconType }) {
+  const common = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 2,
+    viewBox: "0 0 24 24",
+  };
+
+  if (type === "pace") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M4 13a8 8 0 0 1 16 0" />
+        <path d="m12 13 4-5" />
+        <path d="M7 17h10" />
+      </svg>
+    );
+  }
+
+  if (type === "clock") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v5l3 2" />
+      </svg>
+    );
+  }
+
+  if (type === "filler") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M12 8v5" />
+        <path d="M12 17h.01" />
+        <path d="M10.2 4.2 3 17a2 2 0 0 0 1.8 3h14.4a2 2 0 0 0 1.8-3L13.8 4.2a2 2 0 0 0-3.6 0Z" />
+      </svg>
+    );
+  }
+
+  if (type === "words") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M5 7h14" />
+        <path d="M5 12h10" />
+        <path d="M5 17h7" />
+      </svg>
+    );
+  }
+
+  if (type === "pause") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <path d="M9 6v12" />
+        <path d="M15 6v12" />
+      </svg>
+    );
+  }
+
+  if (type === "grid") {
+    return (
+      <svg {...common} aria-hidden="true">
+        <rect x="4" y="4" width="6" height="6" rx="1" />
+        <rect x="14" y="4" width="6" height="6" rx="1" />
+        <rect x="4" y="14" width="6" height="6" rx="1" />
+        <rect x="14" y="14" width="6" height="6" rx="1" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common} aria-hidden="true">
+      <path d="M12 3v4" />
+      <path d="M12 17v4" />
+      <path d="M3 12h4" />
+      <path d="M17 12h4" />
+      <path d="m5.6 5.6 2.8 2.8" />
+      <path d="m15.6 15.6 2.8 2.8" />
+      <path d="m18.4 5.6-2.8 2.8" />
+      <path d="m8.4 15.6-2.8 2.8" />
+    </svg>
+  );
+}
+
+function HighlightedTranscript({
+  fillerCounts,
+  transcript,
+}: {
+  fillerCounts: Analysis["fillerCounts"];
+  transcript: string;
+}) {
+  if (!transcript) {
+    return null;
+  }
+
+  const fillerWords = fillerCounts.map((item) => item.word);
+
+  if (fillerWords.length === 0) {
+    return <>{transcript}</>;
+  }
+
+  const escaped = fillerWords.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const pattern = new RegExp(`\\b(${escaped.join("|")})\\b`, "gi");
+  const parts = transcript.split(pattern);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        fillerWords.some((word) => word.toLowerCase() === part.toLowerCase()) ? (
+          <mark key={`${part}-${index}`}>{part}</mark>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 function PracticeScreen({
   activeTopic,
   duration,
@@ -1399,15 +1554,67 @@ function ReviewScreen({
   onRetry: () => void;
   rawTranscript: string;
 }) {
+  const hasTranscript = analysis.wordCount > 0;
+  const hasToneData = analysis.tone.label !== "tone unavailable";
+  const score = getReviewScore(analysis);
+  const scoreCircumference = 314;
+  const scoreOffset = scoreCircumference - (score / 100) * scoreCircumference;
+  const topSuggestion = analysis.suggestions[0] ?? "Try another round and aim for one clear claim.";
+  const metricCards = [
+    {
+      icon: "pace" as const,
+      label: "Pace",
+      tone: "good",
+      value: `${analysis.wpm}`,
+      unit: "wpm",
+    },
+    {
+      icon: "words" as const,
+      label: "Total words",
+      tone: "good",
+      value: `${analysis.wordCount}`,
+      unit: `in ${formatTime(duration)}`,
+    },
+    {
+      icon: "filler" as const,
+      label: "Filler words",
+      tone: analysis.totalFillers > 0 ? "warn" : "good",
+      value: `${analysis.totalFillers}`,
+      unit: "tracked",
+    },
+    {
+      icon: "spark" as const,
+      label: "Filler load",
+      tone: analysis.fillerRate >= 8 ? "warn" : "good",
+      value: `${analysis.fillerRate}`,
+      unit: "%",
+    },
+    {
+      icon: "grid" as const,
+      label: "Unique words",
+      tone: "good",
+      value: `${analysis.vocabulary.uniqueWords}`,
+      unit: analysis.vocabulary.label,
+    },
+    {
+      icon: "pause" as const,
+      label: "Quiet space",
+      tone: analysis.tone.pauseRatio > 42 ? "warn" : "good",
+      value: hasToneData ? `${analysis.tone.pauseRatio}` : "—",
+      unit: hasToneData ? "%" : "no mic data",
+    },
+  ];
+
   return (
     <section className="review-screen" aria-label="Speech feedback">
-      <header className="review-header">
+      <header className="review-hero">
         <div>
           <button
-            className="tiny-wordmark wordmark-button"
+            className="review-brand wordmark-button"
             type="button"
             onClick={onNewSpin}
           >
+            <span aria-hidden="true" />
             Offscript
           </button>
           <h1>Your speech review</h1>
@@ -1423,106 +1630,172 @@ function ReviewScreen({
         </div>
       </header>
 
-      <p className="review-topic">{activeTopic.prompt}</p>
+      <p className="review-topic">— {activeTopic.prompt}</p>
 
-      <div className="score-row">
-        <div>
-          <span>{analysis.totalFillers}</span>
-          <p>filler words</p>
-        </div>
-        <div>
-          <span>{analysis.fillerRate}%</span>
-          <p>filler load</p>
-        </div>
-        <div>
-          <span>{analysis.wpm}</span>
-          <p>words per minute</p>
-        </div>
-        <div>
-          <span>{analysis.wordCount}</span>
-          <p>total words in {formatTime(duration)}</p>
-        </div>
-        <div>
-          <span>{analysis.tone.averageEnergy || "—"}</span>
-          <p>{analysis.tone.label}</p>
-        </div>
-        <div>
-          <span>{analysis.vocabulary.uniqueWords}</span>
-          <p>{analysis.vocabulary.label} vocab</p>
-        </div>
-      </div>
-
-      <div className="review-grid">
-        <article className="review-block">
-          <p className="panel-kicker">Raw version</p>
-          <p>{rawTranscript || "No transcript captured yet."}</p>
-        </article>
-        <article className="review-block">
-          <p className="panel-kicker">Cleaned version</p>
+      {!hasTranscript ? (
+        <section className="review-empty-state" aria-label="No speech captured">
+          <div className="review-empty-icon">
+            <ReviewIcon type="spark" />
+          </div>
+          <h2>No speech captured yet</h2>
           <p>
-            {analysis.cleanedTranscript ||
-              "Once you record a transcript, the cleaned version appears here."}
+            Start another round and speak for a few sentences. Your review will
+            appear here once Offscript has words to work with.
           </p>
-        </article>
-        <article className="review-block">
-          <p className="panel-kicker">Filler words</p>
-          {analysis.fillerCounts.length > 0 ? (
-            <ul className="filler-list">
-              {analysis.fillerCounts.map((item) => (
-                <li key={item.word}>
-                  <span>{item.word}</span>
-                  <strong>{item.count}</strong>
-                </li>
+          <button className="primary-pill" type="button" onClick={onRetry}>
+            Practice again
+          </button>
+        </section>
+      ) : (
+        <>
+          <section className="review-summary">
+            <article className="review-score-card">
+              <svg width="136" height="136" viewBox="0 0 120 120" aria-hidden="true">
+                <circle
+                  cx="60"
+                  cy="60"
+                  fill="none"
+                  r="50"
+                  stroke="rgba(237,233,220,0.08)"
+                  strokeWidth="10"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  fill="none"
+                  r="50"
+                  stroke="currentColor"
+                  strokeDasharray={scoreCircumference}
+                  strokeDashoffset={scoreOffset}
+                  strokeLinecap="round"
+                  strokeWidth="10"
+                  transform="rotate(-90 60 60)"
+                />
+                <text x="60" y="58" textAnchor="middle">
+                  {score}
+                </text>
+                <text className="score-total" x="60" y="77" textAnchor="middle">
+                  / 100
+                </text>
+              </svg>
+              <p>Overall clarity</p>
+              <span>
+                {score >= 75
+                  ? "Strong foundation"
+                  : score >= 55
+                    ? "Useful practice round"
+                    : "Needs a fuller answer"}
+              </span>
+            </article>
+
+            <div className="review-metric-grid">
+              {metricCards.map((metric) => (
+                <article className="review-stat" data-tone={metric.tone} key={metric.label}>
+                  <div className="review-stat-icon">
+                    <ReviewIcon type={metric.icon} />
+                  </div>
+                  <strong>
+                    {metric.value}
+                    <small>{metric.unit}</small>
+                  </strong>
+                  <p>{metric.label}</p>
+                </article>
               ))}
-            </ul>
-          ) : (
-            <p>No tracked filler words found.</p>
-          )}
-        </article>
-        <article className="review-block">
-          <p className="panel-kicker">Tone and rhythm</p>
-          <p>{analysis.tone.summary}</p>
-          <ul className="metric-list">
-            <li>
-              <span>Voice energy</span>
-              <strong>{analysis.tone.averageEnergy || "—"}</strong>
-            </li>
-            <li>
-              <span>Energy contrast</span>
-              <strong>{analysis.tone.energyRange || "—"}</strong>
-            </li>
-            <li>
-              <span>Quiet space</span>
-              <strong>{analysis.tone.pauseRatio || "—"}%</strong>
-            </li>
-          </ul>
-        </article>
-        <article className="review-block">
-          <p className="panel-kicker">Structure</p>
-          <ul className="metric-list">
-            <li>
-              <span>Estimated sentence beats</span>
-              <strong>{analysis.structure.sentenceCount}</strong>
-            </li>
-            <li>
-              <span>Average beat length</span>
-              <strong>{analysis.structure.averageSentenceWords} words</strong>
-            </li>
-            <li>
-              <span>Long running beats</span>
-              <strong>{analysis.structure.longSentenceCount}</strong>
-            </li>
-          </ul>
-        </article>
-        <article className="review-block">
-          <p className="panel-kicker">What to work on</p>
-          <ul className="suggestion-list">
-            {analysis.suggestions.map((suggestion) => (
-              <li key={suggestion}>{suggestion}</li>
-            ))}
-          </ul>
-        </article>
-      </div>
+            </div>
+          </section>
+
+          <div className="review-detail-grid">
+            <div className="review-column">
+              <article className="review-panel review-panel-large">
+                <p className="review-panel-title"><span />Transcript</p>
+                <p className="review-transcript">
+                  <HighlightedTranscript
+                    fillerCounts={analysis.fillerCounts}
+                    transcript={rawTranscript}
+                  />
+                </p>
+              </article>
+
+              <article className="review-panel">
+                <p className="review-panel-title"><span />Filler words</p>
+                {analysis.fillerCounts.length > 0 ? (
+                  <div className="review-chip-row">
+                    {analysis.fillerCounts.map((item) => (
+                      <span className="review-chip" key={item.word}>
+                        {item.word}
+                        <small>×{item.count}</small>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="review-muted">No tracked filler words found.</p>
+                )}
+              </article>
+
+              <article className="review-panel">
+                <p className="review-panel-title"><span />Structure</p>
+                <div className="review-lines">
+                  <div>
+                    <span>Estimated sentence beats</span>
+                    <strong>{analysis.structure.sentenceCount}</strong>
+                  </div>
+                  <div>
+                    <span>Average beat length</span>
+                    <strong>{analysis.structure.averageSentenceWords} words</strong>
+                  </div>
+                  <div>
+                    <span>Long running beats</span>
+                    <strong>{analysis.structure.longSentenceCount}</strong>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div className="review-column">
+              <article className="review-panel">
+                <p className="review-panel-title"><span />Tone and rhythm</p>
+                <p className="review-muted">{analysis.tone.summary}</p>
+                <div className="review-bars">
+                  {[
+                    ["Voice energy", analysis.tone.averageEnergy],
+                    ["Energy contrast", analysis.tone.energyRange],
+                    ["Quiet space", analysis.tone.pauseRatio],
+                  ].map(([label, value]) => (
+                    <div className="review-bar" key={label}>
+                      <div>
+                        <span>{label}</span>
+                        <strong>{hasToneData ? value : "—"}</strong>
+                      </div>
+                      <span>
+                        <i
+                          style={{
+                            width: `${hasToneData ? Number(value) : 0}%`,
+                          }}
+                        />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="review-panel review-advice-panel">
+                <p className="review-panel-title"><span />What to work on</p>
+                <div className="review-advice">
+                  <strong>Next rep</strong>
+                  <p>{topSuggestion}</p>
+                </div>
+              </article>
+
+              <article className="review-panel">
+                <p className="review-panel-title"><span />Cleaned version</p>
+                <p className="review-transcript review-transcript-clean">
+                  {analysis.cleanedTranscript}
+                </p>
+              </article>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
