@@ -107,3 +107,25 @@ test("reshuffles only after the full pool has been spent", () => {
   assert.equal(second.hand.length, 1);
   assert.equal(second.state.reshuffleCount, 1);
 });
+
+test("topic bank has broad balanced coverage without duplicates", () => {
+  const ids = new Set(TOPICS.map((topic) => topic.id));
+  const prompts = new Set(TOPICS.map((topic) => topic.prompt));
+
+  assert.equal(ids.size, TOPICS.length);
+  assert.equal(prompts.size, TOPICS.length);
+
+  for (const category of [
+    "Tech",
+    "Finance",
+    "Hot takes",
+    "Storytelling",
+    "Debate",
+    "General",
+  ] satisfies SpeechTopic["category"][]) {
+    assert.ok(
+      TOPICS.filter((topic) => topic.category === category).length >= 8,
+      `${category} should have enough topic variety`,
+    );
+  }
+});
