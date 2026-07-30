@@ -2288,14 +2288,18 @@ body {
 .timer-circle > div {
   position: relative;
   z-index: 1;
+  max-width: 76%;
 }
 
 .timer-circle strong {
   color: var(--lab-ink);
   display: block;
-  font-size: clamp(4.8rem, 10vw, 7.2rem);
-  line-height: 0.82;
+  font-size: clamp(4.2rem, 8vw, 6.15rem);
+  line-height: 0.9;
   margin: 0 0 22px;
+  max-width: 100%;
+  min-width: 0;
+  text-align: center;
 }
 
 .recording-state {
