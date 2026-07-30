@@ -1410,8 +1410,8 @@ function ReviewScreen({
           >
             Offscript
           </button>
-          <h1>Your speaking snapshot is locked.</h1>
-          <p>Raw words, rhythm, filler habits, and next-rep coaching from the timer window.</p>
+          <h1>Your speech review</h1>
+          <p>Here’s what you said, what showed up often, and one place to improve next.</p>
         </div>
         <div className="review-actions">
           <button className="primary-pill" type="button" onClick={onRetry}>
