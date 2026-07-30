@@ -1002,7 +1002,6 @@ function RollScreen({
 
           <div className="slot-scroll-stage">
             <div className="slot-stage-copy">
-              <p>Prompt engine armed</p>
               <h2>Pull once. Commit fast. Speak clean.</h2>
             </div>
             <SlotMachine
