@@ -1861,15 +1861,15 @@ body {
 
 .landing-grid {
   align-items: center;
-  gap: clamp(52px, 7vw, 108px);
-  grid-template-columns: minmax(500px, 640px) minmax(420px, 520px);
+  gap: clamp(42px, 5.5vw, 82px);
+  grid-template-columns: minmax(430px, 560px) minmax(360px, 440px);
   justify-content: center;
   min-height: calc(100vh - 110px);
 }
 
 .landing-copy {
   justify-self: start;
-  max-width: 640px;
+  max-width: 560px;
   text-align: left;
 }
 
@@ -1887,9 +1887,9 @@ body {
 
 .wordmark {
   color: var(--lab-ink);
-  font-size: clamp(5rem, 9vw, 9.6rem);
+  font-size: clamp(4.25rem, 7.3vw, 7.6rem);
   letter-spacing: -0.075em;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.12),
     10px 14px 0 rgba(169, 146, 255, 0.18),
@@ -1898,18 +1898,18 @@ body {
 
 .landing-copy h1 {
   color: var(--lab-ink);
-  font-size: clamp(2.45rem, 4.8vw, 5.25rem);
-  line-height: 0.95;
-  margin: 0 0 22px;
-  max-width: 620px;
+  font-size: clamp(2rem, 3.65vw, 4rem);
+  line-height: 1;
+  margin: 0 0 18px;
+  max-width: 540px;
 }
 
 .landing-copy p:not(.wordmark, .landing-kicker) {
   color: var(--lab-muted);
-  font-size: clamp(1.15rem, 1.65vw, 1.55rem);
+  font-size: clamp(1.02rem, 1.35vw, 1.25rem);
   line-height: 1.35;
   margin: 0;
-  max-width: 600px;
+  max-width: 500px;
 }
 
 .signal-strip {
@@ -2023,8 +2023,10 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: grid;
   gap: 16px;
+  max-width: 460px;
   padding: 18px;
   position: relative;
+  width: 100%;
 }
 
 .topic-console::before {
@@ -2076,8 +2078,8 @@ body {
     linear-gradient(145deg, #29241c, #0b0c0b 62%) padding-box,
     linear-gradient(135deg, #fff0a8 0%, #d8aa55 30%, #6e4d18 68%, #f1ce68 100%) border-box;
   border-radius: 28px 28px 12px 12px;
-  max-width: none;
-  min-height: 460px;
+  max-width: 420px;
+  min-height: 414px;
   transition:
     transform 180ms ease,
     box-shadow 180ms ease;
